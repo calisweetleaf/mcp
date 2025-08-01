@@ -9,8 +9,42 @@ echo "Setting up Python virtual environment for codebase tooling..."
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null
 then
-    echo "Python 3 could not be found. Please install Python 3 to proceed."
-    exit 1
+    echo "Python 3 could not be found."
+    echo "Attempting to install Python 3..."
+
+    # Detect OS and install Python 3 accordingly
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y python3 python3-venv python3-pip
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y python3 python3-venv python3-pip
+        else
+            echo "Unsupported Linux distribution. Please install Python 3 manually."
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            brew install python
+        else
+            echo "Homebrew not found. Please install Homebrew and rerun this script, or install Python 3 manually."
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "win32"* ]]; then
+        echo "Please install Python 3 manually from https://www.python.org/downloads/windows/"
+        exit 1
+    else
+        echo "Unknown OS. Please install Python 3 manually."
+        exit 1
+    fi
+
+    # Re-check if Python 3 is now available
+    if ! command -v python3 &> /dev/null
+    then
+        echo "Python 3 installation failed or not found in PATH. Please install manually."
+        exit 1
+    fi
 fi
 
 # Create a virtual environment if it doesn't exist

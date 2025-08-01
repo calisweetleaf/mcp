@@ -1,0 +1,10 @@
+RestrictedPython
+Pillow
+psutil
+mss
+pyautogui
+pynput
+pytesseract
+pywin32
+pyperclip
+python3
