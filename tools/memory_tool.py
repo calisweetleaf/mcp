@@ -13,23 +13,24 @@ import time
 from datetime import datetime, timedelta
 
 # Import the interconnection engine
+class RealMemoryInterconnectionEngine:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def analyze_memory_entry(self, key, value, source):
+        raise NotImplementedError
+
+    def intelligent_search(self, query: str, max_results: int = 5):
+        raise NotImplementedError
+
+    def get_memory_insights(self):
+        raise NotImplementedError
+
 try:
-    from tools.memory_interconnect import MemoryInterconnectionEngine as RealMemoryInterconnectionEngine
+    from tools.memory_interconnect import MemoryInterconnectionEngine as MemoryInterconnectionEngine
     INTERCONNECT_AVAILABLE = True
 except ImportError:
     INTERCONNECT_AVAILABLE = False
-    class RealMemoryInterconnectionEngine:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def analyze_memory_entry(self, key, value, source):
-            raise NotImplementedError
-
-        def intelligent_search(self, query: str, max_results: int = 5):
-            raise NotImplementedError
-
-        def get_memory_insights(self):
-            raise NotImplementedError
 
 class EnhancedMemoryTool:
     """Enhanced memory with semantic intelligence and cross-system connections"""

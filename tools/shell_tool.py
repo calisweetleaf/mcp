@@ -13,7 +13,7 @@ import logging
 import threading
 import psutil
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Callable
+from typing import Any, Dict, Optional, Tuple, Callable
 
 
 class ShellTool:

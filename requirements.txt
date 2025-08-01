@@ -6,3 +6,5 @@ pyautogui
 pynput
 pytesseract
 pyperclip
+jsonrpcserver
+pywin32

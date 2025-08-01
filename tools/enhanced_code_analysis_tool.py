@@ -194,7 +194,7 @@ class SecurityAuditor:
             "total_issues": len(issues),
             "issues": issues,
             "by_severity": self._group_by_severity(issues),
-            "by_category": self.bb7_group_by_category(issues)
+            "by_category": self._group_by_category(issues)
         }
     
     def _extract_call_name(self, call_node: ast.Call) -> Optional[str]:

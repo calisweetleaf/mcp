@@ -17,8 +17,7 @@ import threading
 import hashlib
 import re
 from collections import Counter, defaultdict
-
-# Import enhanced memory tool
+import configparser
 try:
     from tools.memory_tool import EnhancedMemoryTool
     ENHANCED_MEMORY_AVAILABLE = True
@@ -136,21 +135,21 @@ class EnhancedSessionTool:
         
         # Keyword-based importance boosts
         for keyword_type, keywords in self.auto_memory_thresholds.items():
-            matches = sum(1 for keyword in keywords if keyword in content_lower)
-            if matches > 0:
-                importance += min(matches * 0.1, 0.3)
+            hit_count = sum(1 for k in keywords if k in content_lower)
+            if hit_count:
+                importance += min(0.1 * hit_count, 0.3)
         
         # Length and complexity factors
         if len(content) > 100:
             importance += 0.1
         if len(content) > 500:
-            importance += 0.1
+            importance += 0.2
         
         # Technical content indicators
         tech_indicators = ['code', 'function', 'class', 'method', 'api', 'database', 'server', 'client']
         tech_matches = sum(1 for indicator in tech_indicators if indicator in content_lower)
         if tech_matches > 0:
-            importance += min(tech_matches * 0.05, 0.2)
+            importance += min(0.05 * tech_matches, 0.2)
         
         return min(importance, 1.0)
     
@@ -168,12 +167,12 @@ class EnhancedSessionTool:
         
         # Check for important keywords
         for keyword_type, keywords in self.auto_memory_thresholds.items():
-            if any(keyword in content_lower for keyword in keywords):
+            if any(k in content_lower for k in keywords):
                 return True
         
         # Check for patterns we've learned are important
         for pattern in self.learned_patterns.get("learning_accelerators", []):
-            if pattern.get("trigger_phrase", "").lower() in content_lower:
+            if isinstance(pattern, str) and pattern.lower() in content_lower:
                 return True
         
         # Length-based importance (longer descriptions often more important)
@@ -245,6 +244,11 @@ class EnhancedSessionTool:
                 tags=tags
             )
             
+            # Update intelligence counters
+            if self.current_session:
+                intel = self.current_session.setdefault("intelligence", {})
+                intel["auto_captured_memories"] = intel.get("auto_captured_memories", 0) + 1
+            
             self.logger.info(f"Auto-captured memory: {memory_key} (importance: {importance:.2f})")
             
         except Exception as e:
@@ -253,45 +257,26 @@ class EnhancedSessionTool:
     def _analyze_session_patterns(self, session: Dict[str, Any]):
         """Analyze session for patterns and learning opportunities"""
         try:
-            # Extract session metrics
-            session_duration = session.get("last_updated", session.get("created", 0)) - session.get("created", 0)
             events = session.get("episodic", {}).get("events", [])
-            insights = session.get("semantic", {}).get("key_insights", [])
-            workflows = session.get("procedural", {}).get("workflows", [])
+            if not events:
+                return
             
-            # Identify successful patterns
-            if len(insights) > 3 and session_duration > 1800:  # 30 minutes with multiple insights
-                success_pattern = {
-                    "pattern_type": "high_insight_session",
-                    "duration": session_duration,
-                    "insight_count": len(insights),
-                    "goal": session.get("goal", ""),
-                    "focus_areas": session.get("metadata", {}).get("attention_focus", []),
-                    "energy_levels": self._extract_energy_progression(events),
-                    "identified_at": time.time()
-                }
-                
-                self.learned_patterns["successful_workflows"].append(success_pattern)
-                
-                # Store pattern in memory
-                self._auto_capture_memory(
-                    "pattern",
-                    f"Identified successful session pattern: {success_pattern['pattern_type']} - "
-                    f"Duration {session_duration/60:.1f}min with {len(insights)} insights",
-                    {"pattern_data": success_pattern}
-                )
-            
-            # Identify obstacle patterns
-            obstacle_events = [e for e in events if e.get("type") in ["problem", "error", "obstacle"]]
-            if len(obstacle_events) > 2:
-                obstacle_pattern = {
-                    "pattern_type": "recurring_obstacles",
-                    "obstacles": [e.get("description", "") for e in obstacle_events],
-                    "session_context": session.get("goal", ""),
-                    "identified_at": time.time()
-                }
-                
-                self.learned_patterns["common_obstacles"].append(obstacle_pattern)
+            # Identify frequent problems
+            problem_events = [e for e in events if e.get("type") in ["problem", "error", "obstacle", "blocker"]]
+            if problem_events:
+                common_terms = Counter()
+                for e in problem_events:
+                    for w in re.findall(r"[a-zA-Z_]{3,}", e.get("description", "").lower()):
+                        if w not in {"the","and","for","with","from","this","that","have","has","had","into","onto","when","then","else"}:
+                            common_terms[w] += 1
+                common_top = [w for w,_ in common_terms.most_common(5)]
+                if common_top:
+                    self.learned_patterns.setdefault("common_obstacles", []).append({
+                        "terms": common_top,
+                        "session": session.get("id"),
+                        "timestamp": time.time()
+                    })
+                    self._save_learned_patterns()
         
         except Exception as e:
             self.logger.error(f"Error analyzing session patterns: {e}")
@@ -300,8 +285,10 @@ class EnhancedSessionTool:
         """Extract energy level progression from events"""
         energy_levels = []
         for event in events:
-            if event.get("type") == "focus_shift" and event.get("details", {}).get("energy"):
-                energy_levels.append(event["details"]["energy"])
+            details = event.get("details", {})
+            energy = details.get("energy_level") or details.get("energy")
+            if isinstance(energy, str):
+                energy_levels.append(energy)
         return energy_levels
     
     def bb7_start_session(self, goal: str, context: Optional[str] = None, 
@@ -309,118 +296,55 @@ class EnhancedSessionTool:
         """Start a new enhanced cognitive session with intelligence"""
         with self._lock:
             session_id = str(uuid.uuid4())
-            timestamp = time.time()
-            
-            # Analyze previous sessions for recommendations
-            recommendations = self._generate_session_recommendations(goal)
-            
-            # Create enhanced session structure
-            session = {
+            now = time.time()
+            self.current_session_id = session_id
+            self.current_session = {
                 "id": session_id,
-                "created": timestamp,
-                "last_updated": timestamp,
-                "status": "active",
                 "goal": goal,
                 "context": context or "",
                 "tags": tags or [],
-                
-                # Enhanced cognitive architecture
+                "created": now,
+                "last_updated": now,
+                "status": "active",
                 "episodic": {
                     "events": [],
                     "timeline": [],
-                    "achievements": [],
+                    "breakthroughs": [],
                     "obstacles": [],
-                    "breakthroughs": []
+                    "achievements": []
                 },
-                
                 "semantic": {
                     "concepts": {},
-                    "relationships": [],
                     "key_insights": [],
-                    "decision_rationale": {},
+                    "relationships": [],
                     "knowledge_connections": []
                 },
-                
                 "procedural": {
-                    "workflows": [],
-                    "commands_used": [],
-                    "patterns_discovered": [],
-                    "automation_opportunities": [],
-                    "learned_shortcuts": []
+                    "workflows": []
                 },
-                
-                # Enhanced metadata
                 "metadata": {
-                    "environment_state": self._capture_environment_state(),
                     "attention_focus": [],
-                    "energy_level": "high",
-                    "momentum": "starting",
-                    "predicted_success_factors": recommendations.get("success_factors", []),
-                    "recommended_focus_duration": recommendations.get("optimal_duration", 60),
-                    "similar_past_sessions": recommendations.get("similar_sessions", [])
+                    "energy_level": "medium",
+                    "momentum": "starting"
                 },
-                
-                # Intelligence tracking
                 "intelligence": {
-                    "auto_captured_memories": 0,
-                    "pattern_matches": recommendations.get("pattern_matches", []),
-                    "learning_opportunities": [],
-                    "cross_session_connections": []
+                    "auto_captured_memories": 0
                 }
             }
-            
-            # Save session
-            session_file = self.sessions_dir / f"{session_id}.json"
-            with open(session_file, 'w', encoding='utf-8') as f:
-                json.dump(session, f, indent=2, ensure_ascii=False)
-            
-            # Update index
+            # Persist
+            self._save_current_session()
             index = self._load_index()
-            index["sessions"][session_id] = {
+            index[session_id] = {
                 "goal": goal,
-                "created": timestamp,
+                "created": now,
                 "status": "active",
-                "tags": tags or [],
-                "file": str(session_file),
-                "predicted_success": recommendations.get("success_probability", 0.5)
+                "tags": tags or []
             }
             self._save_index(index)
             
-            # Set as current session
-            self.current_session_id = session_id
-            self.current_session = session
-            
-            # Auto-capture session start
-            self._auto_capture_memory(
-                "session_start",
-                f"Started new session: {goal}" + (f" - {context}" if context else ""),
-                {
-                    "session_goal": goal,
-                    "session_id": session_id,
-                    "timestamp": timestamp,
-                    "recommendations": recommendations
-                }
-            )
-            
-            # Format response with intelligence
-            response = f"🚀 Enhanced Session Started: {goal}\n"
-            response += f"Session ID: {session_id}\n"
-            
-            if recommendations.get("success_factors"):
-                response += f"\n💡 Success Factors (based on past sessions):\n"
-                for factor in recommendations["success_factors"][:3]:
-                    response += f"  • {factor}\n"
-            
-            if recommendations.get("optimal_duration"):
-                response += f"\n⏱️ Recommended Focus Duration: {recommendations['optimal_duration']} minutes\n"
-            
-            if recommendations.get("similar_sessions"):
-                response += f"\n🔍 Found {len(recommendations['similar_sessions'])} similar past sessions for reference\n"
-            
-            response += f"\n✨ Auto-memory formation enabled - insights will be captured automatically!"
-            
-            self.logger.info(f"Started enhanced session: {session_id}")
-            return response
+            # Recommend initial actions
+            recs = self._generate_session_recommendations(goal)
+            return f"🎯 Started session {session_id[:8]}: {goal}\nSuggested duration: {recs.get('optimal_duration',60)} min"
     
     def _generate_session_recommendations(self, goal: str) -> Dict[str, Any]:
         """Generate intelligent recommendations based on past sessions"""
@@ -433,46 +357,22 @@ class EnhancedSessionTool:
         }
         
         try:
-            # Analyze goal for keywords and context
-            goal_words = set(goal.lower().split())
-            
-            # Find similar past sessions
             index = self._load_index()
-            similar_sessions = []
-            
-            for session_id, session_info in index.get("sessions", {}).items():
-                past_goal = session_info.get("goal", "").lower()
-                past_words = set(past_goal.split())
-                
-                # Calculate similarity
-                intersection = goal_words & past_words
-                if intersection and len(intersection) / len(goal_words | past_words) > 0.3:
-                    similar_sessions.append({
-                        "session_id": session_id,
-                        "goal": session_info.get("goal", ""),
-                        "similarity": len(intersection) / len(goal_words | past_words)
-                    })
-            
-            recommendations["similar_sessions"] = sorted(similar_sessions, 
-                                                       key=lambda x: x["similarity"], reverse=True)[:5]
-            
-            # Extract success factors from learned patterns
-            for pattern in self.learned_patterns.get("successful_workflows", []):
-                if any(word in pattern.get("goal", "").lower() for word in goal_words):
-                    recommendations["success_factors"].extend(pattern.get("focus_areas", []))
-                    if pattern.get("duration"):
-                        recommendations["optimal_duration"] = max(recommendations["optimal_duration"], 
-                                                                pattern["duration"] // 60)
-            
-            # Remove duplicates and limit
-            recommendations["success_factors"] = list(set(recommendations["success_factors"]))[:5]
-            
-            # Calculate success probability based on similar sessions and patterns
-            if similar_sessions:
-                recommendations["success_probability"] = min(0.9, 0.5 + len(similar_sessions) * 0.1)
-            
+            # naive optimal duration based on recent successful sessions lengths
+            durations = []
+            for sid in list(index.keys())[-10:]:
+                f = self.sessions_dir / f"{sid}.json"
+                if f.exists():
+                    with open(f, 'r', encoding='utf-8') as fh:
+                        s = json.load(fh)
+                        dur = max(0, s.get("last_updated", s.get("created", 0)) - s.get("created", 0))
+                        if dur:
+                            durations.append(dur)
+            if durations:
+                avg = sum(durations)/len(durations)
+                recommendations["optimal_duration"] = max(30, int(avg/60))
         except Exception as e:
-            self.logger.error(f"Error generating session recommendations: {e}")
+            self.logger.warning(f"Failed to compute recommendations: {e}")
         
         return recommendations
     
@@ -497,11 +397,9 @@ class EnhancedSessionTool:
                 "details": details or {},
                 "auto_analyzed": False
             }
-            
-            # Enhanced event categorization
+            # Categorization
             if event_type in ["breakthrough", "major_insight", "critical_discovery"]:
                 self.current_session["episodic"]["breakthroughs"].append(event)
-                # Auto-capture breakthrough
                 self._auto_capture_memory(
                     "breakthrough",
                     description,
@@ -512,24 +410,22 @@ class EnhancedSessionTool:
                     }
                 )
                 event["auto_analyzed"] = True
-                
             elif event_type in ["obstacle", "problem", "error", "blocker"]:
                 self.current_session["episodic"]["obstacles"].append(event)
-                
             elif event_type in ["achievement", "milestone", "completion"]:
                 self.current_session["episodic"]["achievements"].append(event)
-                # Auto-capture achievement
                 self._auto_capture_memory(
                     "achievement",
                     description,
                     {
                         "session_goal": self.current_session.get("goal"),
+                        "energy_level": self.current_session.get("metadata", {}).get("energy_level"),
                         "timestamp": timestamp
                     }
                 )
                 event["auto_analyzed"] = True
             
-            # Add to main event log
+            # Add to main logs
             self.current_session["episodic"]["events"].append(event)
             self.current_session["episodic"]["timeline"].append({
                 "time": timestamp,
@@ -537,7 +433,7 @@ class EnhancedSessionTool:
                 "summary": description[:100]
             })
             
-            # Intelligent event analysis
+            # Intelligent capture
             if self._should_auto_capture(event_type, description):
                 self._auto_capture_memory(
                     event_type,
@@ -550,14 +446,14 @@ class EnhancedSessionTool:
                     }
                 )
                 event["auto_analyzed"] = True
-                self.current_session["intelligence"]["auto_captured_memories"] += 1
             
             self.current_session["last_updated"] = timestamp
             self._save_current_session()
             
             response = f"📝 Event logged: {description}"
             if event["auto_analyzed"]:
-                response += f"\n🧠 Auto-captured in memory (total: {self.current_session['intelligence']['auto_captured_memories']})"
+                total = self.current_session.get('intelligence', {}).get('auto_captured_memories', 0)
+                response += f"\n🧠 Auto-captured in memory (total: {total})"
             
             self.logger.info(f"Enhanced event logged: {event_type} - {description}")
             return response
@@ -597,32 +493,22 @@ class EnhancedSessionTool:
                 "session_context": {
                     "goal": self.current_session.get("goal"),
                     "focus_areas": self.current_session.get("metadata", {}).get("attention_focus", []),
-                    "energy_level": self.current_session.get("metadata", {}).get("energy_level")
                 }
             }
             
-            self.current_session["semantic"]["key_insights"].append(insight_entry)
-            
-            # Update concept network
-            if concept not in self.current_session["semantic"]["concepts"]:
-                self.current_session["semantic"]["concepts"][concept] = {
-                    "defined": timestamp,
-                    "insights": [],
-                    "related_to": relationships or [],
-                    "importance_score": 0.5,
-                    "evolution": []
-                }
-            
-            concept_data = self.current_session["semantic"]["concepts"][concept]
-            concept_data["insights"].append(insight)
+            # Update semantic structures
+            sem = self.current_session.setdefault("semantic", {})
+            concepts = sem.setdefault("concepts", {})
+            concept_data = concepts.setdefault(concept, {"insights": [], "importance_score": 0.5})
+            concept_data["insights"].append(insight_entry)
             concept_data["importance_score"] = min(1.0, concept_data["importance_score"] + 0.1)
-            concept_data["evolution"].append({
+            concept_data.setdefault("evolution", []).append({
                 "timestamp": timestamp,
                 "type": "insight_added",
                 "content": insight
             })
             
-            # Add enhanced relationships
+            # Relationships
             if relationships:
                 for related_concept in relationships:
                     relationship = {
@@ -632,10 +518,8 @@ class EnhancedSessionTool:
                         "context": insight,
                         "strength": self._calculate_relationship_strength(concept, related_concept, insight)
                     }
-                    self.current_session["semantic"]["relationships"].append(relationship)
-                    
-                    # Cross-connect concepts
-                    self.current_session["semantic"]["knowledge_connections"].append({
+                    sem.setdefault("relationships", []).append(relationship)
+                    sem.setdefault("knowledge_connections", []).append({
                         "concepts": [concept, related_concept],
                         "connection_type": "insight_based",
                         "evidence": insight,
@@ -656,7 +540,14 @@ class EnhancedSessionTool:
                         "timestamp": timestamp
                     }
                 )
+                self.current_session.setdefault("intelligence", {}).setdefault("auto_captured_memories", 0)
                 self.current_session["intelligence"]["auto_captured_memories"] += 1
+            
+            self.current_session.setdefault("semantic", {}).setdefault("key_insights", []).append({
+                "timestamp": timestamp,
+                "insight": insight,
+                "concept": concept
+            })
             
             self.current_session["last_updated"] = timestamp
             self._save_current_session()
@@ -676,37 +567,27 @@ class EnhancedSessionTool:
         
         # Length and detail factors
         if len(insight) > 50:
-            confidence += 0.1
+            confidence += 0.2
         if len(insight) > 150:
-            confidence += 0.1
+            confidence += 0.2
         
         # Specificity indicators
-        specific_words = ["because", "due to", "results in", "causes", "leads to", "enables"]
-        if any(word in insight.lower() for word in specific_words):
-            confidence += 0.2
-        
-        # Evidence indicators
-        evidence_words = ["tested", "verified", "confirmed", "observed", "measured"]
-        if any(word in insight.lower() for word in evidence_words):
-            confidence += 0.2
+        if any(tok in insight.lower() for tok in ["because", "therefore", "thus", "hence", "due to"]):
+            confidence += 0.1
         
         return min(confidence, 1.0)
-    
+
     def _calculate_relationship_strength(self, concept1: str, concept2: str, context: str) -> float:
         """Calculate strength of relationship between concepts"""
-        strength = 0.5
-        
-        # Co-occurrence in context
-        if concept1.lower() in context.lower() and concept2.lower() in context.lower():
-            strength += 0.3
-        
-        # Strong relationship indicators
-        strong_indicators = ["causes", "enables", "requires", "depends on", "results in"]
-        if any(indicator in context.lower() for indicator in strong_indicators):
-            strength += 0.3
-        
-        return min(strength, 1.0)
-    
+        base = 0.3
+        if concept1 and concept2:
+            base += 0.2
+        overlap = len(set(concept1.lower().split()) & set(concept2.lower().split()))
+        base += min(0.1 * overlap, 0.2)
+        if len(context) > 80:
+            base += 0.1
+        return min(base, 1.0)
+
     def bb7_get_session_insights(self, session_id: Optional[str] = None) -> str:
         """Get comprehensive insights about a session"""
         target_session_id = session_id or self.current_session_id
@@ -742,34 +623,24 @@ class EnhancedSessionTool:
             
             # Event analysis
             events = session.get("episodic", {}).get("events", [])
-            breakthroughs = session.get("episodic", {}).get("breakthroughs", [])
-            obstacles = session.get("episodic", {}).get("obstacles", [])
-            achievements = session.get("episodic", {}).get("achievements", [])
+            if events:
+                insights.append(f"\n📝 Events: {len(events)} recorded")
+                types = Counter(e.get("type", "?") for e in events)
+                top_types = ", ".join(f"{t}({c})" for t,c in types.most_common(5))
+                insights.append(f"  • Types: {top_types}")
+                
+                # Energy progression
+                energy_progression = self._extract_energy_progression(events)
+                if energy_progression:
+                    insights.append(f"  • Energy progression: {" -> ".join(energy_progression[:6])}{'...' if len(energy_progression)>6 else ''}")
             
-            insights.append(f"\n📊 Event Summary:")
-            insights.append(f"  • Total events: {len(events)}")
-            insights.append(f"  • Breakthroughs: {len(breakthroughs)}")
-            insights.append(f"  • Obstacles: {len(obstacles)}")
-            insights.append(f"  • Achievements: {len(achievements)}")
+            # Concepts and insights
+            semantic = session.get("semantic", {})
+            key_insights = semantic.get("key_insights", [])
+            insights.append(f"\n💡 Key Insights: {len(key_insights)}")
+            for ki in key_insights[:3]:
+                insights.append(f"  • {ki.get('concept', '')}: {ki.get('insight', '')}")
             
-            # Concept network
-            concepts = session.get("semantic", {}).get("concepts", {})
-            key_insights = session.get("semantic", {}).get("key_insights", [])
-            
-            if concepts:
-                insights.append(f"\n🧭 Concept Network ({len(concepts)} concepts):")
-                # Sort concepts by importance
-                sorted_concepts = sorted(
-                    concepts.items(),
-                    key=lambda x: x[1].get("importance_score", 0.5),
-                    reverse=True
-                )
-                for concept, data in sorted_concepts[:5]:
-                    importance = data.get("importance_score", 0.5)
-                    insight_count = len(data.get("insights", []))
-                    insights.append(f"  • {concept}: {insight_count} insights (importance: {importance:.2f})")
-            
-            # Workflow patterns
             workflows = session.get("procedural", {}).get("workflows", [])
             if workflows:
                 insights.append(f"\n⚙️ Learned Workflows ({len(workflows)}):")
@@ -795,55 +666,36 @@ class EnhancedSessionTool:
     
     def bb7_cross_session_analysis(self, days_back: int = 30) -> str:
         """Analyze patterns across multiple sessions"""
+        cutoff = time.time() - days_back*24*60*60
         try:
-            cutoff_time = time.time() - (days_back * 24 * 60 * 60)
             index = self._load_index()
-            
             recent_sessions = []
-            for session_id, session_info in index.get("sessions", {}).items():
-                if session_info.get("created", 0) > cutoff_time:
-                    session_file = self.sessions_dir / f"{session_id}.json"
-                    if session_file.exists():
-                        with open(session_file, 'r', encoding='utf-8') as f:
-                            session_data = json.load(f)
-                        recent_sessions.append(session_data)
-            
+            for sid, meta in index.items():
+                f = self.sessions_dir / f"{sid}.json"
+                if f.exists() and meta.get('created', 0) >= cutoff:
+                    with open(f, 'r', encoding='utf-8') as fh:
+                        recent_sessions.append(json.load(fh))
             if not recent_sessions:
-                return f"No sessions found in the last {days_back} days"
+                return "No sessions found in the specified time window"
             
             analysis = []
-            analysis.append(f"🔍 Cross-Session Analysis ({days_back} days)")
-            analysis.append("=" * 50)
-            analysis.append(f"📊 Analyzed {len(recent_sessions)} sessions\n")
+            analysis.append("📈 Cross-Session Analysis")
+            analysis.append("="*40)
+            analysis.append(f"Analyzed sessions: {len(recent_sessions)} (last {days_back} days)")
             
-            # Goal pattern analysis
-            goals = [s.get("goal", "") for s in recent_sessions]
-            goal_words = []
-            for goal in goals:
-                goal_words.extend(goal.lower().split())
-            
-            common_goal_words = Counter(goal_words).most_common(5)
-            analysis.append("🎯 Common Goal Themes:")
-            for word, count in common_goal_words:
-                if len(word) > 3:  # Skip short words
-                    analysis.append(f"  • {word}: {count} sessions")
-            
-            # Success pattern analysis
+            # Success metric
             successful_sessions = []
             for session in recent_sessions:
-                duration = session.get("last_updated", 0) - session.get("created", 0)
+                duration = session.get("last_updated", session.get("created", 0)) - session.get("created", 0)
                 insights = len(session.get("semantic", {}).get("key_insights", []))
                 auto_memories = session.get("intelligence", {}).get("auto_captured_memories", 0)
-                
-                # Define success criteria
                 success_score = 0
-                if duration > 1800:  # > 30 minutes
+                if duration > 1800:
                     success_score += 1
-                if insights > 2:  # Multiple insights
+                if insights > 2:
                     success_score += 2
-                if auto_memories > 3:  # Rich auto-capture
+                if auto_memories > 3:
                     success_score += 1
-                
                 if success_score >= 3:
                     successful_sessions.append({
                         "session": session,
@@ -851,57 +703,279 @@ class EnhancedSessionTool:
                         "duration": duration,
                         "insights": insights
                     })
-            
             analysis.append(f"\n✨ Success Analysis:")
             analysis.append(f"  • Successful sessions: {len(successful_sessions)}/{len(recent_sessions)}")
-            
             if successful_sessions:
                 avg_duration = sum(s["duration"] for s in successful_sessions) / len(successful_sessions)
                 avg_insights = sum(s["insights"] for s in successful_sessions) / len(successful_sessions)
-                
                 analysis.append(f"  • Average successful duration: {avg_duration/60:.1f} minutes")
                 analysis.append(f"  • Average insights per success: {avg_insights:.1f}")
-                
-                # Extract success factors
                 success_factors = []
                 for s in successful_sessions:
                     focus_areas = s["session"].get("metadata", {}).get("attention_focus", [])
                     success_factors.extend(focus_areas)
-                
                 if success_factors:
-                    common_factors = Counter(success_factors).most_common(3)
-                    analysis.append(f"  • Top success factors:")
-                    for factor, count in common_factors:
-                        analysis.append(f"    - {factor} ({count} sessions)")
-            
-            # Concept evolution analysis
-            all_concepts = {}
-            for session in recent_sessions:
-                concepts = session.get("semantic", {}).get("concepts", {})
-                for concept, data in concepts.items():
-                    if concept not in all_concepts:
-                        all_concepts[concept] = []
-                    all_concepts[concept].append({
-                        "session_id": session.get("id"),
-                        "importance": data.get("importance_score", 0.5),
-                        "insights": len(data.get("insights", []))
-                    })
-            
-            # Find evolving concepts (appearing in multiple sessions)
-            evolving_concepts = {k: v for k, v in all_concepts.items() if len(v) > 1}
-            
-            if evolving_concepts:
-                analysis.append(f"\n🧭 Evolving Concepts ({len(evolving_concepts)}):")
-                for concept, occurrences in list(evolving_concepts.items())[:5]:
-                    total_importance = sum(o["importance"] for o in occurrences)
-                    analysis.append(f"  • {concept}: {len(occurrences)} sessions (importance: {total_importance:.2f})")
-            
+                    top = Counter(success_factors).most_common(5)
+                    analysis.append("  • Frequent success focus areas: " + ", ".join(f"{k}({v})" for k,v in top))
             return "\n".join(analysis)
-            
         except Exception as e:
-            self.logger.error(f"Error in cross-session analysis: {e}")
-            return f"Error in cross-session analysis: {str(e)}"
+            self.logger.error(f"Cross-session analysis failed: {e}")
+            return f"Cross-session analysis failed: {e}"
     
+    def bb7_pause_session(self, reason: Optional[str] = None) -> str:
+        """Pause the current session"""
+        if not self.current_session_id or not self.current_session:
+            return "No active session to pause."
+        with self._lock:
+            self.current_session["status"] = "paused"
+            self.current_session["last_updated"] = time.time()
+            self.current_session.setdefault("metadata", {})["pause_reason"] = reason or "unspecified"
+            self._save_current_session()
+            index = self._load_index()
+            if self.current_session_id in index:
+                index[self.current_session_id]["status"] = "paused"
+                self._save_index(index)
+            return f"⏸️ Session {self.current_session_id[:8]} paused."
+
+    def bb7_resume_session(self, session_id: str) -> str:
+        """Resume a paused session"""
+        f = self.sessions_dir / f"{session_id}.json"
+        if not f.exists():
+            return f"Session {session_id} not found"
+        try:
+            with open(f, 'r', encoding='utf-8') as fh:
+                self.current_session = json.load(fh)
+            self.current_session_id = session_id
+            self.current_session["status"] = "active"
+            self.current_session["last_updated"] = time.time()
+            self._save_current_session()
+            index = self._load_index()
+            if session_id in index:
+                index[session_id]["status"] = "active"
+                self._save_index(index)
+            return f"▶️ Resumed session {session_id[:8]}"
+        except Exception as e:
+            self.logger.error(f"Failed to resume session {session_id}: {e}")
+            return f"Failed to resume session: {e}"
+
+    def bb7_list_sessions(self, status: Optional[str] = None, limit: int = 20) -> str:
+        """List all sessions with optional status filter"""
+        try:
+            index = self._load_index()
+            items = list(index.items())
+            if status:
+                items = [(k,v) for k,v in items if v.get('status') == status]
+            items.sort(key=lambda kv: kv[1].get('created', 0), reverse=True)
+            items = items[:max(1, limit)]
+            lines = ["📋 Sessions:"]
+            for sid, meta in items:
+                created = datetime.fromtimestamp(meta.get('created', 0)).strftime('%Y-%m-%d %H:%M')
+                lines.append(f"  • {sid[:8]} [{meta.get('status','?')}] {created} - {meta.get('goal','')}")
+            return "\n".join(lines)
+        except Exception as e:
+            self.logger.error(f"Failed to list sessions: {e}")
+            return f"Failed to list sessions: {e}"
+
+    def bb7_get_session_summary(self, session_id: str) -> str:
+        """Get a detailed summary of a specific session"""
+        f = self.sessions_dir / f"{session_id}.json"
+        if not f.exists():
+            return f"Session {session_id} not found"
+        try:
+            with open(f, 'r', encoding='utf-8') as fh:
+                session = json.load(fh)
+            summary = []
+            summary.append(f"📄 Session Summary: {session_id[:8]}")
+            created = datetime.fromtimestamp(session.get('created', 0))
+            updated = datetime.fromtimestamp(session.get('last_updated', session.get('created', 0)))
+            summary.append(f"🎯 Goal: {session.get('goal','')}")
+            summary.append(f"📅 Created: {created.strftime('%Y-%m-%d %H:%M:%S')}")
+            summary.append(f"🔄 Last Updated: {updated.strftime('%Y-%m-%d %H:%M:%S')}")
+            summary.append(f"📊 Status: {session.get('status', 'Unknown')}")
+            tags = session.get("tags", [])
+            if tags:
+                summary.append(f"🏷️ Tags: {', '.join(tags)}")
+            # Episodic
+            episodic = session.get("episodic", {})
+            events = episodic.get("events", [])
+            if events:
+                summary.append(f"\n📝 Events ({len(events)} total):\n")
+                for event in events[-10:]:
+                    event_time = datetime.fromtimestamp(event["timestamp"]).strftime("%H:%M")
+                    summary.append(f"  • {event_time}: {event['description']}")
+            # Semantic
+            semantic = session.get("semantic", {})
+            concepts = semantic.get("concepts", {})
+            insights = semantic.get("key_insights", [])
+            if concepts:
+                summary.append(f"\n🧠 Concepts ({len(concepts)}):\n")
+                for concept, data in list(concepts.items())[:5]:
+                    summary.append(f"  • {concept}: {len(data.get('insights', []))} insights")
+            if insights:
+                summary.append(f"\n💡 Key Insights ({len(insights)}):\n")
+                for ins in insights[-5:]:
+                    summary.append(f"  • {ins['insight']}")
+            # Focus
+            meta = session.get("metadata", {})
+            energy = meta.get("energy_level", "medium")
+            momentum = meta.get("momentum", "starting")
+            summary.append(f"\n🎯 Focus: {', '.join(meta.get('attention_focus', [])) if meta.get('attention_focus') else 'n/a'}")
+            summary.append(f"⚡ Energy: {energy}, Momentum: {momentum}")
+            return "\n".join(summary)
+        except Exception as e:
+            self.logger.error(f"Failed to summarize session {session_id}: {e}")
+            return f"Failed to summarize session: {e}"
+
+    def bb7_link_memory_to_session(self, memory_key: str) -> str:
+        """Link a memory key to the current session"""
+        if not self.current_session_id or not self.current_session:
+            return "No active session. Start a session first with bb7_start_session."
+
+        with self._lock:
+            memory_index = self._load_memory_index()
+            session_id = self.current_session_id
+
+            # Add memory to session's linked memories
+            session_memories = memory_index.setdefault("session_memories", {}).setdefault(session_id, [])
+            if memory_key not in session_memories:
+                session_memories.append(memory_key)
+
+            # Link memory to session
+            memory_to_sessions = memory_index.setdefault("memory_to_sessions", {}).setdefault(memory_key, [])
+            if session_id not in memory_to_sessions:
+                memory_to_sessions.append(session_id)
+
+            self._save_memory_index(memory_index)
+
+            self.logger.info(f"Linked memory '{memory_key}' to session '{session_id[:8]}'")
+            return f"✅ Memory '{memory_key}' linked to current session '{session_id[:8]}'"
+
+    def bb7_auto_memory_stats(self) -> str:
+        """Automatically compute and report memory usage statistics, trends, and optimization suggestions."""
+        if not self.current_session:
+            return "No active session to get auto-memory stats from."
+        
+        auto_captured_count = self.current_session.get('intelligence', {}).get('auto_captured_memories', 0)
+        
+        response = f"Auto-captured memories this session: {auto_captured_count}"
+        
+        if auto_captured_count > 0 and self.memory_tool:
+            try:
+                # Attempt to get more detailed stats from the memory tool itself
+                memory_insights = self.memory_tool.get_memory_insights()
+                response += f"\n\nOverall Memory Insights:\n{memory_insights}"
+            except Exception as e:
+                self.logger.warning(f"Could not retrieve overall memory insights: {e}")
+                response += "\n\n(Could not retrieve overall memory insights)"
+        
+        return response
+
+    def _load_index(self) -> Dict[str, Any]:
+        """Load the session index"""
+        if self.index_file.exists():
+            try:
+                with open(self.index_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.error(f"Failed to load session index: {e}")
+        return {}
+
+    def _save_index(self, index: Dict[str, Any]) -> None:
+        """Save the session index"""
+        try:
+            with open(self.index_file, 'w', encoding='utf-8') as f:
+                json.dump(index, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.logger.error(f"Failed to save session index: {e}")
+
+    def _capture_environment_state(self) -> Dict[str, Any]:
+        """Capture current development environment state"""
+        env = {
+            "cwd": os.getcwd(),
+            "timestamp": time.time(),
+        }
+        return env
+
+    def _load_current_session(self) -> None:
+        """Load the current session from disk"""
+        if not self.current_session_id:
+            return
+        f = self.sessions_dir / f"{self.current_session_id}.json"
+        if f.exists():
+            try:
+                with open(f, 'r', encoding='utf-8') as fh:
+                    self.current_session = json.load(fh)
+            except Exception as e:
+                self.logger.error(f"Failed to load session {self.current_session_id}: {e}")
+
+    def _save_current_session(self) -> None:
+        """Save the current session to disk"""
+        if not self.current_session_id or not self.current_session:
+            return
+        f = self.sessions_dir / f"{self.current_session_id}.json"
+        try:
+            with open(f, 'w', encoding='utf-8') as fh:
+                json.dump(self.current_session, fh, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.logger.error(f"Failed to save session {self.current_session_id}: {e}")
+
+    def _load_memory_index(self) -> Dict[str, Any]:
+        """Load the memory-session mapping"""
+        memory_index_file = self.sessions_dir / "memory_index.json"
+        if memory_index_file.exists():
+            try:
+                with open(memory_index_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.error(f"Failed to load memory index: {e}")
+        return {"memory_to_sessions": {}, "session_memories": {}}
+
+    def _save_memory_index(self, memory_index: Dict[str, Any]) -> None:
+        """Save the memory-session mapping"""
+        memory_index_file = self.sessions_dir / "memory_index.json"
+        try:
+            with open(memory_index_file, 'w', encoding='utf-8') as f:
+                json.dump(memory_index, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            self.logger.error(f"Failed to save memory index: {e}")
+
+    def bb7_record_workflow(self, workflow_name: str, steps: List[str], 
+                           context: Optional[str] = None) -> str:
+        """Record a procedural workflow or pattern"""
+        if not self.current_session_id:
+            return "No active session. Start a session first with bb7_start_session."
+        if not self.current_session:
+            self._load_current_session()
+            if not self.current_session:
+                return "Failed to load current session. Please start a new session."
+        with self._lock:
+            wf = {
+                "name": workflow_name,
+                "steps": steps,
+                "context": context or "",
+                "created": time.time(),
+                "frequency": 1
+            }
+            self.current_session.setdefault("procedural", {}).setdefault("workflows", []).append(wf)
+            self.current_session["last_updated"] = time.time()
+            self._save_current_session()
+            return f"⚙️ Recorded workflow '{workflow_name}' with {len(steps)} steps."
+
+    def bb7_update_focus(self, focus_areas: List[str], energy_level: str = "medium", momentum: str = "steady") -> str:
+        """Update current attention focus and energy state"""
+        if not self.current_session_id:
+            return "No active session. Start a session first with bb7_start_session."
+        if not self.current_session:
+            self._load_current_session()
+        with self._lock:
+            meta = self.current_session.setdefault("metadata", {})
+            meta["attention_focus"] = focus_areas
+            meta["energy_level"] = energy_level
+            meta["momentum"] = momentum
+            self.current_session["last_updated"] = time.time()
+            self._save_current_session()
+            return "✅ Focus updated"
+
     def get_tools(self) -> Dict[str, Dict[str, Any]]:
         """Return all available enhanced session tools with their metadata."""
         return {
@@ -949,17 +1023,50 @@ class EnhancedSessionTool:
                     "name": "bb7_capture_insight",
                     "description": "💡 Record semantic insights, architectural understanding, or conceptual breakthroughs. Use when you or the user gain important understanding about the codebase, design patterns, or problem domain. Builds conceptual knowledge base.",
                     "category": "sessions",
-                    "priority": "medium",
-                    "when_to_use": ["insights", "understanding", "breakthroughs", "learning", "patterns"],
+                    "priority": "high",
+                    "when_to_use": ["insight_recording", "architecture", "design_patterns", "conceptual_breakthrough"],
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "insight": { "type": "string", "description": "The key insight or understanding" },
-                            "concept": { "type": "string", "description": "Main concept this relates to" },
-                            "relationships": { "type": "array", "items": {"type": "string"}, "description": "Related concepts or dependencies" }
+                            "insight": { "type": "string" },
+                            "concept": { "type": "string" },
+                            "relationships": { "type": "array", "items": {"type": "string"} }
                         },
                         "required": ["insight", "concept"]
                     }
+                }
+            },
+            'bb7_get_session_insights': {
+                "callable": lambda session_id=None: self.bb7_get_session_insights(session_id),
+                "metadata": {
+                    "name": "bb7_get_session_insights",
+                    "description": "Generate a session intelligence report, highlighting key insights, breakthroughs, and cognitive metrics.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["session_reporting", "cognitive_metrics", "insight_generation"],
+                    "input_schema": {"type": "object", "properties": {"session_id": {"type": "string"}}, "required": []}
+                }
+            },
+            "bb7_cross_session_analysis": {
+                "callable": lambda days_back=30: self.bb7_cross_session_analysis(days_back),
+                "metadata": {
+                    "name": "bb7_cross_session_analysis",
+                    "description": "Analyze patterns, goals, and outcomes across multiple sessions. Use for longitudinal insights and workflow optimization.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["longitudinal_analysis", "workflow_optimization", "session_patterns"],
+                    "input_schema": {"type": "object", "properties": {"days_back": {"type": "integer", "default": 30}}, "required": []}
+                }
+            },
+            "bb7_session_recommendations": {
+                "callable": lambda goal: json.dumps(self._generate_session_recommendations(goal), indent=2),
+                "metadata": {
+                    "name": "bb7_session_recommendations",
+                    "description": "Provide recommendations for next actions or improvements based on session history and patterns.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["action_recommendations", "workflow_improvement", "session_guidance"],
+                    "input_schema": {"type": "object", "properties": {"goal": {"type": "string"}}, "required": ["goal"]}
                 }
             },
             'bb7_record_workflow': {
@@ -1004,13 +1111,13 @@ class EnhancedSessionTool:
                 "callable": self.bb7_pause_session,
                 "metadata": {
                     "name": "bb7_pause_session",
-                    "description": "⏸️ Pause current session with state preservation. Use when taking breaks, switching tasks, or ending work sessions. Captures environment state for seamless resumption.",
+                    "description": "Pause the current session",
                     "category": "sessions",
-                    "priority": "medium",
-                    "when_to_use": ["break_time", "task_switch", "session_end", "interruption"],
+                    "priority": "low",
+                    "when_to_use": ["pause_work", "interrupt_session"],
                     "input_schema": {
                         "type": "object",
-                        "properties": { "reason": { "type": "string", "description": "Why the session is being paused" } },
+                        "properties": { "reason": { "type": "string", "description": "Reason for pausing" } },
                         "required": []
                     }
                 }
@@ -1019,13 +1126,13 @@ class EnhancedSessionTool:
                 "callable": self.bb7_resume_session,
                 "metadata": {
                     "name": "bb7_resume_session",
-                    "description": "▶️ Resume a previously paused session with full context restoration. Use when continuing interrupted work or returning to previous tasks. Provides seamless continuity.",
+                    "description": "Resume a paused session",
                     "category": "sessions",
-                    "priority": "medium",
-                    "when_to_use": ["resume_work", "continue_task", "context_restoration", "session_continuation"],
+                    "priority": "low",
+                    "when_to_use": ["resume_work", "continue_session"],
                     "input_schema": {
                         "type": "object",
-                        "properties": { "session_id": { "type": "string", "description": "Session ID to resume" } },
+                        "properties": { "session_id": { "type": "string", "description": "ID of session to resume" } },
                         "required": ["session_id"]
                     }
                 }
@@ -1034,16 +1141,13 @@ class EnhancedSessionTool:
                 "callable": self.bb7_list_sessions,
                 "metadata": {
                     "name": "bb7_list_sessions",
-                    "description": "📋 View all development sessions with status and context. Use to understand work history, find interrupted tasks, or choose which session to resume.",
+                    "description": "List all sessions with optional status filter",
                     "category": "sessions",
                     "priority": "low",
-                    "when_to_use": ["session_review", "work_history", "interrupted_tasks", "session_selection"],
+                    "when_to_use": ["session_overview", "find_session"],
                     "input_schema": {
                         "type": "object",
-                        "properties": {
-                            "status": { "type": "string", "enum": ["active", "paused", "completed"] },
-                            "limit": { "type": "integer", "default": 20 }
-                        },
+                        "properties": { "status": { "type": "string", "description": "Filter by status (e.g., 'active', 'paused', 'completed')" }, "limit": { "type": "integer", "description": "Maximum number of sessions to return" } },
                         "required": []
                     }
                 }
@@ -1052,52 +1156,15 @@ class EnhancedSessionTool:
                 "callable": self.bb7_get_session_summary,
                 "metadata": {
                     "name": "bb7_get_session_summary",
-                    "description": "📊 Get detailed summary of specific session including events, insights, and outcomes. Use to understand context of previous work or communicate progress.",
+                    "description": "Get a detailed summary of a specific session",
                     "category": "sessions",
                     "priority": "low",
-                    "when_to_use": ["session_analysis", "progress_review", "context_understanding", "reporting"],
+                    "when_to_use": ["session_details", "review_session"],
                     "input_schema": {
                         "type": "object",
-                        "properties": { "session_id": { "type": "string", "description": "Session to summarize" } },
+                        "properties": { "session_id": { "type": "string", "description": "ID of session to summarize" } },
                         "required": ["session_id"]
                     }
-                }
-            },
-            "bb7_get_session_insights": {
-                "callable": self.bb7_get_session_insights,
-                 "metadata": {
-                    "name": "bb7_get_session_insights",
-                    "description": "Get comprehensive insights about a session",
-                    "category": "sessions",
-                    "priority": "low",
-                    "when_to_use": ["session_analysis", "progress_review", "context_understanding", "reporting"],
-                    "input_schema": {
-                        "type": "object",
-                        "properties": { "session_id": { "type": "string", "description": "Session to get insights from" } },
-                        "required": ["session_id"]
-                    }
-                }
-            },
-            "bb7_cross_session_analysis": {
-                "callable": lambda days_back=30: self.bb7_cross_session_analysis(days_back),
-                "metadata": {
-                    "name": "bb7_cross_session_analysis",
-                    "description": "Analyze patterns, goals, and outcomes across multiple sessions. Use for longitudinal insights and workflow optimization.",
-                    "category": "sessions",
-                    "priority": "medium",
-                    "when_to_use": ["longitudinal_analysis", "workflow_optimization", "session_patterns"],
-                    "input_schema": {"type": "object", "properties": {"days_back": {"type": "integer", "default": 30}}, "required": []}
-                }
-            },
-            "bb7_session_recommendations": {
-                "callable": lambda goal: json.dumps(self._generate_session_recommendations(goal), indent=2),
-                "metadata": {
-                    "name": "bb7_session_recommendations",
-                    "description": "Provide recommendations for next actions or improvements based on session history and patterns.",
-                    "category": "sessions",
-                    "priority": "medium",
-                    "when_to_use": ["action_recommendations", "workflow_improvement", "session_guidance"],
-                    "input_schema": {"type": "object", "properties": {}, "required": []}
                 }
             },
             "bb7_learned_patterns": {
@@ -1115,10 +1182,10 @@ class EnhancedSessionTool:
                 "callable": lambda: json.dumps(self.session_intelligence, indent=2),
                 "metadata": {
                     "name": "bb7_session_intelligence",
-                    "description": "Generate a session intelligence report, highlighting key insights, breakthroughs, and cognitive metrics.",
+                    "description": "Show raw intelligence metrics learned across sessions.",
                     "category": "sessions",
-                    "priority": "medium",
-                    "when_to_use": ["session_reporting", "cognitive_metrics", "insight_generation"],
+                    "priority": "low",
+                    "when_to_use": ["metrics", "debug"],
                     "input_schema": {"type": "object", "properties": {}, "required": []}
                 }
             },
@@ -1138,7 +1205,7 @@ class EnhancedSessionTool:
                 }
             },
             "bb7_auto_memory_stats": {
-                "callable": lambda: f"Auto-captured memories this session: {self.current_session.get('intelligence', {}).get('auto_captured_memories', 0) if self.current_session else 0}",
+                "callable": self.bb7_auto_memory_stats,
                 "metadata": {
                     "name": "bb7_auto_memory_stats",
                     "description": "Automatically compute and report memory usage statistics, trends, and optimization suggestions.",
@@ -1149,379 +1216,3 @@ class EnhancedSessionTool:
                 }
             }
         }
-
-    def _load_index(self) -> Dict[str, Any]:
-        """Load the session index"""
-        if self.index_file.exists():
-            try:
-                with open(self.index_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                self.logger.error(f"Failed to load session index: {e}")
-        return {"sessions": {}, "active_threads": {}, "patterns": {}}
-
-    def _save_index(self, index: Dict[str, Any]) -> None:
-        """Save the session index"""
-        try:
-            with open(self.index_file, 'w', encoding='utf-8') as f:
-                json.dump(index, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            self.logger.error(f"Failed to save session index: {e}")
-
-    def _capture_environment_state(self) -> Dict[str, Any]:
-        """Capture current development environment state"""
-        import os, subprocess
-        state = {
-            "timestamp": time.time(),
-            "working_directory": os.getcwd(),
-        }
-        # Git state with proper error handling to prevent hanging
-        try:
-            git_branch = subprocess.run(['git', 'branch', '--show-current'], 
-                                      capture_output=True, text=True, timeout=2, 
-                                      shell=False, check=False)
-            if git_branch.returncode == 0 and git_branch.stdout.strip():
-                state["git"] = {"branch": git_branch.stdout.strip()}
-            else:
-                state["git"] = {"status": "not_in_git_repo"}
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
-            state["git"] = {"status": "git_unavailable", "reason": str(e)}
-        except Exception as e:
-            state["git"] = {"status": "error", "reason": str(e)}
-        return state
-
-    def _load_current_session(self) -> None:
-        """Load the current session from disk"""
-        if not self.current_session_id:
-            return
-        
-        session_file = self.sessions_dir / f"{self.current_session_id}.json"
-        if session_file.exists():
-            try:
-                with open(session_file, 'r', encoding='utf-8') as f:
-                    self.current_session = json.load(f)
-            except Exception as e:
-                self.logger.error(f"Failed to load current session: {e}")
-                self.current_session = None
-
-    def _save_current_session(self) -> None:
-        """Save the current session to disk"""
-        if not self.current_session_id or not self.current_session:
-            return
-        
-        session_file = self.sessions_dir / f"{self.current_session_id}.json"
-        try:
-            with open(session_file, 'w', encoding='utf-8') as f:
-                json.dump(self.current_session, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            self.logger.error(f"Failed to save current session: {e}")
-    
-    def _load_memory_index(self) -> Dict[str, Any]:
-        """Load the memory-session mapping"""
-        memory_index_file = self.sessions_dir / "memory_index.json"
-        if memory_index_file.exists():
-            try:
-                with open(memory_index_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                self.logger.error(f"Failed to load memory index: {e}")
-        return {"memory_to_sessions": {}, "session_memories": {}}
-
-    def _save_memory_index(self, memory_index: Dict[str, Any]) -> None:
-        """Save the memory-session mapping"""
-        memory_index_file = self.sessions_dir / "memory_index.json"
-        try:
-            with open(memory_index_file, 'w', encoding='utf-8') as f:
-                json.dump(memory_index, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            self.logger.error(f"Failed to save memory index: {e}")
-
-    def bb7_record_workflow(self, workflow_name: str, steps: List[str], 
-                           context: Optional[str] = None) -> str:
-        """Record a procedural workflow or pattern"""
-        if not self.current_session_id:
-            return "No active session. Start a session first with bb7_start_session."
-        
-        if not self.current_session:
-            self._load_current_session()
-            if not self.current_session:
-                return "Failed to load current session. Please start a new session."
-        
-        with self._lock:
-            timestamp = time.time()
-            workflow = {
-                "timestamp": timestamp,
-                "name": workflow_name,
-                "steps": steps,
-                "context": context or "",
-                "frequency": 1
-            }
-            
-            # Check if similar workflow exists
-            existing = None
-            for i, existing_workflow in enumerate(self.current_session["procedural"]["workflows"]):
-                if existing_workflow["name"] == workflow_name:
-                    existing = i
-                    break
-            
-            if existing is not None:
-                # Update existing workflow
-                self.current_session["procedural"]["workflows"][existing]["frequency"] += 1
-                self.current_session["procedural"]["workflows"][existing]["last_used"] = timestamp
-                self.current_session["procedural"]["workflows"][existing]["steps"] = steps
-            else:
-                # Add new workflow
-                self.current_session["procedural"]["workflows"].append(workflow)
-            
-            self.current_session["last_updated"] = timestamp
-            self._save_current_session()
-            
-            self.logger.info(f"Recorded workflow: {workflow_name}")
-            return f"⚙️ Workflow recorded: {workflow_name} ({len(steps)} steps)"
-
-    def bb7_update_focus(self, focus_areas: List[str], energy_level: str = "medium", momentum: str = "steady") -> str:
-        """Update current attention focus and energy state"""
-        if not self.current_session_id:
-            return "No active session. Start a session first with bb7_start_session."
-        if not self.current_session:
-            self._load_current_session()
-            if not self.current_session:
-                return "Failed to load current session. Please start a new session."
-        
-        with self._lock:
-            timestamp = time.time()
-            self.current_session["metadata"]["attention_focus"] = focus_areas
-            self.current_session["metadata"]["energy_level"] = energy_level
-            self.current_session["metadata"]["momentum"] = momentum
-            self.current_session["metadata"]["focus_updated"] = timestamp
-            self.current_session["last_updated"] = timestamp
-            
-            # Log as event
-            self.current_session["episodic"]["events"].append({
-                "timestamp": timestamp,
-                "type": "focus_shift",
-                "description": f"Focus shifted to: {', '.join(focus_areas)}",
-                "details": {
-                    "energy": energy_level,
-                    "momentum": momentum
-                }
-            })
-            
-            self._save_current_session()
-            return f"🎯 Focus updated: {', '.join(focus_areas)} (Energy: {energy_level}, Momentum: {momentum})"
-
-    def bb7_pause_session(self, reason: Optional[str] = None) -> str:
-        """Pause the current session"""
-        if not self.current_session_id:
-            return "No active session to pause."
-        if not self.current_session:
-            self._load_current_session()
-            if not self.current_session:
-                return "Failed to load current session. Please start a new session."
-        
-        with self._lock:
-            timestamp = time.time()
-            self.current_session["status"] = "paused"
-            self.current_session["paused_at"] = timestamp
-            self.current_session["pause_reason"] = reason or "Manual pause"
-            self.current_session["last_updated"] = timestamp
-            
-            # Capture final environment state
-            self.current_session["metadata"]["pause_environment"] = self._capture_environment_state()
-            
-            # Log pause event
-            self.current_session["episodic"]["events"].append({
-                "timestamp": timestamp,
-                "type": "session_paused",
-                "description": f"Session paused: {reason or 'Manual pause'}",
-                "details": {"environment_captured": True}
-            })
-            
-            self._save_current_session()
-            
-            # Update index
-            index = self._load_index()
-            if self.current_session_id in index["sessions"]:
-                index["sessions"][self.current_session_id]["status"] = "paused"
-            self._save_index(index)
-            
-            paused_session_id = self.current_session_id
-            self.current_session_id = None
-            self.current_session = None
-            
-            self.logger.info(f"Paused session: {paused_session_id}")
-            return f"⏸️ Session paused: {reason or 'Manual pause'}"
-
-    def bb7_resume_session(self, session_id: str) -> str:
-        """Resume a paused session"""
-        with self._lock:
-            session_file = self.sessions_dir / f"{session_id}.json"
-            if not session_file.exists():
-                return f"Session {session_id} not found."
-            
-            # Load session
-            with open(session_file, 'r', encoding='utf-8') as f:
-                session = json.load(f)
-            
-            if session["status"] != "paused":
-                return f"Session {session_id} is not paused (status: {session['status']})."
-            
-            # Resume session
-            timestamp = time.time()
-            session["status"] = "active"
-            session["resumed_at"] = timestamp
-            session["last_updated"] = timestamp
-            
-            # Set as current session
-            self.current_session_id = session_id
-            self.current_session = session
-            
-            self._save_current_session()
-            
-            # Update index
-            index = self._load_index()
-            if session_id in index["sessions"]:
-                index["sessions"][session_id]["status"] = "active"
-            self._save_index(index)
-            
-            self.logger.info(f"Resumed session: {session_id}")
-            return f"▶️ Session resumed: {session['goal']}"
-
-    def bb7_list_sessions(self, status: Optional[str] = None, limit: int = 20) -> str:
-        """List all sessions with optional status filter"""
-        index = self._load_index()
-        sessions = index.get("sessions", {})
-        
-        if not sessions:
-            return "No sessions found."
-        
-        # Filter by status if specified
-        if status:
-            filtered_sessions = {k: v for k, v in sessions.items() 
-                               if v.get("status") == status}
-        else:
-            filtered_sessions = sessions
-        
-        if not filtered_sessions:
-            return f"No sessions found with status '{status}'."
-        
-        # Sort by creation time (newest first)
-        sorted_sessions = sorted(filtered_sessions.items(), 
-                               key=lambda x: x[1].get("created", 0), reverse=True)
-        
-        result = []
-        result.append(f"📊 Sessions ({len(sorted_sessions)} total):\n")
-        
-        for session_id, session_info in sorted_sessions[:limit]:
-            created = datetime.fromtimestamp(session_info.get("created", 0))
-            status_emoji = {"active": "🟢", "paused": "⏸️", "completed": "✅"}.get(
-                session_info.get("status", "unknown"), "❓"
-            )
-            
-            result.append(f"{status_emoji} {session_id[:8]}... - {session_info.get('goal', 'No goal')}")
-            result.append(f"    Created: {created.strftime('%Y-%m-%d %H:%M')}")
-            
-            tags = session_info.get("tags", [])
-            if tags:
-                result.append(f"    Tags: {', '.join(tags)}")
-        
-        if len(sorted_sessions) > limit:
-            result.append(f"\n... and {len(sorted_sessions) - limit} more sessions")
-        
-        return "\n".join(result)
-
-    def bb7_get_session_summary(self, session_id: str) -> str:
-        """Get a detailed summary of a specific session"""
-        session_file = self.sessions_dir / f"{session_id}.json"
-        
-        if not session_file.exists():
-            return f"Session {session_id} not found."
-        
-        with open(session_file, 'r', encoding='utf-8') as f:
-            session = json.load(f)
-        
-        # Build comprehensive summary
-        summary = []
-        
-        # Header
-        created = datetime.fromtimestamp(session.get("created", 0))
-        updated = datetime.fromtimestamp(session.get("last_updated", 0))
-        
-        summary.append(f"📋 Session Summary: {session_id}")
-        summary.append(f"🎯 Goal: {session.get('goal', 'Not specified')}")
-        summary.append(f"📅 Created: {created.strftime('%Y-%m-%d %H:%M:%S')}")
-        summary.append(f"🔄 Last Updated: {updated.strftime('%Y-%m-%d %H:%M:%S')}")
-        summary.append(f"📊 Status: {session.get('status', 'Unknown')}")
-        
-        tags = session.get("tags", [])
-        if tags:
-            summary.append(f"🏷️ Tags: {', '.join(tags)}")
-        
-        # Episodic Memory
-        episodic = session.get("episodic", {})
-        events = episodic.get("events", [])
-        if events:
-            summary.append(f"\n📝 Events ({len(events)} total):")
-            for event in events[-10:]:  # Last 10 events
-                event_time = datetime.fromtimestamp(event["timestamp"]).strftime("%H:%M")
-                summary.append(f"  • {event_time}: {event['description']}")
-        
-        # Semantic Memory
-        semantic = session.get("semantic", {})
-        concepts = semantic.get("concepts", {})
-        insights = semantic.get("key_insights", [])
-        
-        if concepts:
-            summary.append(f"\n🧠 Concepts ({len(concepts)}):")
-            for concept, data in list(concepts.items())[:5]:
-                summary.append(f"  • {concept}: {len(data.get('insights', []))} insights")
-        
-        if insights:
-            summary.append(f"\n💡 Key Insights ({len(insights)}):")
-            for insight in insights[-5:]:
-                summary.append(f"  • {insight['insight']}")
-        
-        # Procedural Memory
-        procedural = session.get("procedural", {})
-        workflows = procedural.get("workflows", [])
-        
-        if workflows:
-            summary.append(f"\n⚙️ Workflows ({len(workflows)}):")
-            for workflow in workflows:
-                freq = workflow.get("frequency", 1)
-                summary.append(f"  • {workflow['name']}: {len(workflow['steps'])} steps (used {freq}x)")
-        
-        # Current Focus
-        metadata = session.get("metadata", {})
-        focus = metadata.get("attention_focus", [])
-        if focus:
-            energy = metadata.get("energy_level", "unknown")
-            momentum = metadata.get("momentum", "unknown")
-            summary.append(f"\n🎯 Current Focus: {', '.join(focus)}")
-            summary.append(f"⚡ Energy: {energy}, Momentum: {momentum}")
-        
-        return "\n".join(summary)
-    
-    def bb7_link_memory_to_session(self, memory_key: str) -> str:
-        """Link a memory key to the current session"""
-        if not self.current_session_id:
-            return "No active session to link memory to."
-        
-        # Update memory index
-        memory_index = self._load_memory_index()
-        
-        if memory_key not in memory_index["memory_to_sessions"]:
-            memory_index["memory_to_sessions"][memory_key] = []
-        
-        if self.current_session_id not in memory_index["memory_to_sessions"][memory_key]:
-            memory_index["memory_to_sessions"][memory_key].append(self.current_session_id)
-        
-        if self.current_session_id not in memory_index["session_memories"]:
-            memory_index["session_memories"][self.current_session_id] = []
-        
-        if memory_key not in memory_index["session_memories"][self.current_session_id]:
-            memory_index["session_memories"][self.current_session_id].append(memory_key)
-        
-        self._save_memory_index(memory_index)
-        
-        return f"🔗 Linked memory key '{memory_key}' to current session {self.current_session_id[:8]}"

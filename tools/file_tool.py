@@ -9,7 +9,7 @@ a dedicated coding environment where full access is desired.
 import os
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional, Callable
 import time
 
 
@@ -373,3 +373,5 @@ if __name__ == "__main__":
     print(file_tool.read_file("test_file.txt"))
     print(file_tool.get_file_info("test_file.txt"))
     print(file_tool.list_directory("."))
+    print(file_tool.search_files(".", "*.txt"))
+    print(file_tool.get_tools())
