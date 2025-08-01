@@ -588,31 +588,149 @@ class EnhancedMemoryTool:
             
             return "\n".join(stats)
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available tool functions with enhanced capabilities"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available memory tools with their metadata."""
         return {
-            # Core memory operations
-            'bb7_memory_store': lambda k, v, category="uncategorized", importance=0.5, tags=None: 
-                self.store(k, v, category, importance, tags or []),
-            'bb7_memory_retrieve': lambda k, include_related=False: 
-                self.retrieve(k, include_related),
-            'bb7_memory_delete': self.delete,
-            
-            # Enhanced listing and search
-            'bb7_memory_list': lambda prefix=None, category=None, min_importance=0.0, sort_by="timestamp": 
-                self.list_keys(prefix, category, min_importance, sort_by),
-            'bb7_memory_search': lambda query, max_results=5: 
-                self.intelligent_search(query, max_results),
-            
-            # Analytics and insights
-            'bb7_memory_stats': self.get_stats,
-            'bb7_memory_insights': self.get_memory_insights,
-            'bb7_memory_consolidate': lambda days_old=30: 
-                self.consolidate_memories(days_old),
-                
-            # Category management
-            'bb7_memory_categories': lambda: 
-                f"Available categories:\n" + "\n".join(f"• {cat}: {desc}" for cat, desc in self.categories.items())
+            'bb7_memory_store': {
+                "callable": lambda k, v, category="uncategorized", importance=0.5, tags=None: self.store(k, v, category, importance, tags or []),
+                "metadata": {
+                    "name": "bb7_memory_store",
+                    "description": "💾 Store a key-value pair in persistent memory with category, importance, and tags. Use for project context, insights, decisions, or any information that should persist across sessions.",
+                    "category": "memory",
+                    "priority": "critical",
+                    "when_to_use": ["project_context", "insights", "decisions", "persistent_data", "knowledge_base"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Unique memory key (e.g. 'project:status')"},
+                            "value": {"type": "string", "description": "Value to store (text, JSON, etc.)"},
+                            "category": {"type": "string", "description": "Category for organization (optional)"},
+                            "importance": {"type": "number", "default": 0.5, "description": "Importance score 0-1 (optional)"},
+                            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for search/filtering (optional)"}
+                        },
+                        "required": ["key", "value"]
+                    }
+                }
+            },
+            'bb7_memory_retrieve': {
+                "callable": lambda k, include_related=False: self.retrieve(k, include_related),
+                "metadata": {
+                    "name": "bb7_memory_retrieve",
+                    "description": "🔍 Retrieve a value from persistent memory by key, with optional related memories. Use for context recall, project history, or knowledge lookup.",
+                    "category": "memory",
+                    "priority": "high",
+                    "when_to_use": ["context_recall", "history", "lookup", "knowledge_retrieval"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Memory key to retrieve"},
+                            "include_related": {"type": "boolean", "default": False, "description": "Include related memories (optional)"}
+                        },
+                        "required": ["key"]
+                    }
+                }
+            },
+            'bb7_memory_delete': {
+                "callable": self.delete,
+                "metadata": {
+                    "name": "bb7_memory_delete",
+                    "description": "🗑️ Delete a key from persistent memory. Use for cleanup, removing outdated or incorrect information.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["cleanup", "remove_outdated", "delete_incorrect"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "key": {"type": "string", "description": "Memory key to delete"} },
+                        "required": ["key"]
+                    }
+                }
+            },
+            'bb7_memory_list': {
+                "callable": lambda prefix=None, category=None, min_importance=0.0, sort_by="timestamp": self.list_keys(prefix, category, min_importance, sort_by),
+                "metadata": {
+                    "name": "bb7_memory_list",
+                    "description": "📚 List memory keys with optional filtering by prefix, category, importance, or sort order. Use to discover available context and knowledge.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["explore_memory", "context_discovery", "knowledge_audit"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "prefix": {"type": "string", "description": "Filter keys by prefix (optional)"},
+                            "category": {"type": "string", "description": "Filter by category (optional)"},
+                            "min_importance": {"type": "number", "default": 0.0, "description": "Minimum importance (optional)"},
+                            "sort_by": {"type": "string", "enum": ["timestamp", "importance", "access", "alphabetical"], "default": "timestamp", "description": "Sort order (optional)"}
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_memory_search': {
+                "callable": lambda query, max_results=5: self.intelligent_search(query, max_results),
+                "metadata": {
+                    "name": "bb7_memory_search",
+                    "description": "🔎 Search memory using semantic or text matching. Use for finding relevant knowledge, context, or related information.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["search", "semantic_lookup", "find_related"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string", "description": "Search query"},
+                            "max_results": {"type": "integer", "default": 5, "description": "Max results (optional)"}
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            'bb7_memory_stats': {
+                "callable": self.get_stats,
+                "metadata": {
+                    "name": "bb7_memory_stats",
+                    "description": "📊 Get statistics about memory usage, entry counts, and storage patterns. Use for memory management and analysis.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["memory_management", "usage_stats", "analysis"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            'bb7_memory_insights': {
+                "callable": self.get_memory_insights,
+                "metadata": {
+                    "name": "bb7_memory_insights",
+                    "description": "🧠 Get high-level insights about memory system, including categories, importance, and usage patterns. Use for knowledge management and optimization.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["insights", "knowledge_management", "optimization"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            'bb7_memory_consolidate': {
+                "callable": lambda days_old=30: self.consolidate_memories(days_old),
+                "metadata": {
+                    "name": "bb7_memory_consolidate",
+                    "description": "🗃️ Consolidate and archive old or low-importance memories. Use for memory optimization and long-term storage.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["archive", "optimize", "cleanup"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "days_old": {"type": "integer", "default": 30, "description": "Archive memories older than this (optional)"} },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_memory_categories': {
+                "callable": lambda: f"Available categories:\n" + "\n".join(f"• {cat}: {desc}" for cat, desc in self.categories.items()),
+                "metadata": {
+                    "name": "bb7_memory_categories",
+                    "description": "🏷️ List all available memory categories and their descriptions. Use for organizing and tagging knowledge.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["organization", "tagging", "category_discovery"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            }
         }
 
 

@@ -882,30 +882,122 @@ class AutoTool:
         
         return "\n".join(output)
 
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available auto-activation tools with bb7_ prefix for MCP consistency"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available auto-activation tools with their metadata."""
         return {
-            # Core auto-activation tools
-            'bb7_workspace_context_loader': lambda include_recent_memories=True, include_active_sessions=True: 
-                self.workspace_context_loader(include_recent_memories, include_active_sessions),
-                
-            'bb7_show_available_capabilities': lambda category=None: 
-                self.show_available_capabilities(category),
-                
-            'bb7_auto_session_resume': lambda workspace_path=None, user_intent=None: 
-                self.auto_session_resume(workspace_path, user_intent),
-                
-            'bb7_intelligent_tool_guide': lambda user_query, context=None: 
-                self.intelligent_tool_guide(user_query, context),
-                
-            # Project analysis tools
-            'bb7_analyze_project_structure': lambda max_depth=3, include_hidden=False: 
-                self.analyze_project_structure(max_depth, include_hidden),
-                
-            'bb7_get_project_dependencies': self.get_project_dependencies,
-            
-            'bb7_get_recent_changes': lambda days=7: 
-                self.get_recent_changes(days)
+            'bb7_workspace_context_loader': {
+                "callable": lambda include_recent_memories=True, include_active_sessions=True: self.workspace_context_loader(include_recent_memories, include_active_sessions),
+                "metadata": {
+                    "name": "bb7_workspace_context_loader",
+                    "description": "🚀 ALWAYS RUN FIRST: Automatically loads relevant project context, active sessions, recent memories, and current workspace state. Essential for understanding where we left off and maintaining seamless continuity across coding sessions.",
+                    "category": "auto_activation",
+                    "priority": "critical",
+                    "when_to_use": ["session_start", "context_needed", "resuming_work", "conversation_start"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "include_recent_memories": { "type": "boolean", "default": True, "description": "Load recent memory entries related to current workspace" },
+                            "include_active_sessions": { "type": "boolean", "default": True, "description": "Check for and resume active development sessions" }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_show_available_capabilities': {
+                "callable": lambda category=None: self.show_available_capabilities(category),
+                "metadata": {
+                    "name": "bb7_show_available_capabilities",
+                    "description": "📋 Display comprehensive overview of all available MCP tools and current system capabilities. Use when user seems unaware of available functionality, when they ask 'what can you do?', or at the start of complex tasks to remind yourself of available tools.",
+                    "category": "auto_activation",
+                    "priority": "high",
+                    "when_to_use": ["capability_inquiry", "tool_discovery", "complex_task_start", "user_confusion"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "category": { "type": "string", "enum": ["all", "memory", "files", "shell", "web", "sessions", "visual", "terminal"], "description": "Filter capabilities by category" } },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_auto_session_resume': {
+                "callable": lambda workspace_path=None, user_intent=None: self.auto_session_resume(workspace_path, user_intent),
+                "metadata": {
+                    "name": "bb7_auto_session_resume",
+                    "description": "🔄 Intelligent session continuity manager. Automatically detects interrupted work, resumes the most relevant active session, or suggests starting a new session based on workspace context and user intent. Critical for eliminating 'cold start' problems.",
+                    "category": "auto_activation",
+                    "priority": "high",
+                    "when_to_use": ["interrupted_work", "session_continuity", "context_recovery", "resuming_development"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "workspace_path": { "type": "string", "description": "Current workspace path for context" },
+                            "user_intent": { "type": "string", "description": "Brief description of what user wants to accomplish" }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_intelligent_tool_guide': {
+                "callable": lambda user_query, context=None: self.intelligent_tool_guide(user_query, context),
+                "metadata": {
+                    "name": "bb7_intelligent_tool_guide",
+                    "description": "🧠 AI-powered tool recommendation engine. Analyzes user intent and suggests optimal tool workflows. Use when user requests are complex or when you need guidance on tool selection.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["complex_requests", "tool_selection", "workflow_planning", "optimization"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "user_query": { "type": "string", "description": "User's request or question" },
+                            "context": { "type": "string", "description": "Current context or situation" }
+                        },
+                        "required": ["user_query"]
+                    }
+                }
+            },
+            'bb7_analyze_project_structure': {
+                "callable": lambda max_depth=3, include_hidden=False: self.analyze_project_structure(max_depth, include_hidden),
+                "metadata": {
+                    "name": "bb7_analyze_project_structure",
+                    "description": "📊 Comprehensive project analysis including file structure, dependencies, and architecture insights. Use when starting work on new projects or when architectural understanding is needed.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["new_project", "architecture_analysis", "codebase_understanding", "onboarding"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "max_depth": { "type": "integer", "default": 3, "description": "Maximum directory depth to analyze" },
+                            "include_hidden": { "type": "boolean", "default": False, "description": "Include hidden files and directories" }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_get_project_dependencies': {
+                "callable": self.get_project_dependencies,
+                "metadata": {
+                    "name": "bb7_get_project_dependencies",
+                    "description": "📦 Analyze and list project dependencies, package.json, requirements.txt, etc. Use when understanding project setup or troubleshooting dependency issues.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["dependency_analysis", "setup_issues", "environment_check", "build_problems"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            },
+            'bb7_get_recent_changes': {
+                "callable": lambda days=7: self.get_recent_changes(days),
+                "metadata": {
+                    "name": "bb7_get_recent_changes",
+                    "description": "🔄 Get recent git changes, modified files, and development activity. Use when understanding recent work or catching up on project changes.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["recent_changes", "git_history", "catch_up", "change_analysis"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "days": { "type": "integer", "default": 7, "description": "Number of days to look back" } },
+                        "required": []
+                    }
+                }
+            }
         }
 
 

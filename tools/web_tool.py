@@ -332,17 +332,95 @@ class WebTool:
             self.logger.error(f"Error extracting links from {url}: {e}")
             return f"Error extracting links from {url}: {str(e)}"
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available tool functions"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available web tools with their metadata."""
         return {
-            'bb7_fetch_url': lambda url, headers=None, timeout=30: 
-                self.fetch_url(url, headers, timeout),
-            'bb7_download_file': lambda url, filename, headers=None:
-                self.download_file(url, filename, headers),
-            'bb7_check_url_status': self.check_url_status,
-            'bb7_search_web': lambda query, num_results=5:
-                self.search_web(query, num_results),
-            'bb7_extract_links': self.extract_links
+            'bb7_fetch_url': {
+                "callable": lambda url, headers=None, timeout=30: self.fetch_url(url, headers, timeout),
+                "metadata": {
+                    "name": "bb7_fetch_url",
+                    "description": "🌐 Fetch content from URLs via HTTP. Use for accessing documentation, APIs, downloading resources, or gathering web-based information. Supports headers and timeouts.",
+                    "category": "web",
+                    "priority": "medium",
+                    "when_to_use": ["documentation", "api_access", "web_resources", "content_fetch", "research"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "url": { "type": "string", "description": "URL to fetch" },
+                            "headers": { "type": "object", "description": "Optional HTTP headers" },
+                            "timeout": { "type": "integer", "default": 30 }
+                        },
+                        "required": ["url"]
+                    }
+                }
+            },
+            'bb7_download_file': {
+                "callable": lambda url, filename, headers=None: self.download_file(url, filename, headers),
+                "metadata": {
+                    "name": "bb7_download_file",
+                    "description": "⬇️ Download files from URLs to local filesystem. Use for fetching resources, documentation, or any web-based assets needed for development.",
+                    "category": "web",
+                    "priority": "medium",
+                    "when_to_use": ["file_download", "resource_fetch", "asset_acquisition", "documentation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "url": { "type": "string", "description": "URL to download from" },
+                            "filename": { "type": "string", "description": "Local path to save file" },
+                            "headers": { "type": "object", "description": "Optional HTTP headers" }
+                        },
+                        "required": ["url", "filename"]
+                    }
+                }
+            },
+            'bb7_check_url_status': {
+                "callable": self.check_url_status,
+                "metadata": {
+                    "name": "bb7_check_url_status",
+                    "description": "🔍 Check URL accessibility and get response headers. Use for testing APIs, verifying links, or troubleshooting web connectivity.",
+                    "category": "web",
+                    "priority": "low",
+                    "when_to_use": ["url_testing", "api_testing", "link_verification", "connectivity_check"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "url": { "type": "string", "description": "URL to check" } },
+                        "required": ["url"]
+                    }
+                }
+            },
+            'bb7_search_web': {
+                "callable": lambda query, num_results=5: self.search_web(query, num_results),
+                "metadata": {
+                    "name": "bb7_search_web",
+                    "description": "🔎 Search the web using DuckDuckGo for quick information lookup. Use when you need current information, documentation links, or research assistance.",
+                    "category": "web",
+                    "priority": "medium",
+                    "when_to_use": ["information_search", "research", "documentation_lookup", "current_info"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "query": { "type": "string", "description": "Search query" },
+                            "num_results": { "type": "integer", "default": 5 }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            'bb7_extract_links': {
+                "callable": self.extract_links,
+                "metadata": {
+                    "name": "bb7_extract_links",
+                    "description": "🔗 Extract all links from webpages in structured format. Use for analyzing websites, finding documentation links, or building link repositories.",
+                    "category": "web",
+                    "priority": "low",
+                    "when_to_use": ["link_extraction", "website_analysis", "documentation_discovery", "scraping"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "url": { "type": "string", "description": "URL to extract links from" } },
+                        "required": ["url"]
+                    }
+                }
+            }
         }
 
 
