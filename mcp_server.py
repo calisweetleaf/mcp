@@ -80,84 +80,112 @@ class MCPServer:
                 "name": "bb7_memory_analyze_entry",
                 "description": "Analyze a memory entry for key concepts, importance, and semantic connections. Use to extract insights and relationships from stored knowledge.",
                 "category": "memory",
-                "input_schema": {"type": "object", "properties": {"key": {"type": "string"}, "value": {"type": "string"}, "source": {"type": "string"}}, "required": ["key", "value"]}
+                "priority": "medium",
+                "when_to_use": ["knowledge_extraction", "semantic_analysis", "insight_generation"],
+                "input_schema": {"type": "object", "properties": {"key": {"type": "string"}, "value": {"type": "string"}, "source": {"type": "string", "default": "memory"}}, "required": ["key", "value"]}
             },
             "bb7_memory_intelligent_search": {
                 "name": "bb7_memory_intelligent_search",
                 "description": "Search memories using semantic similarity and concept matching. Use for advanced context recall and finding related information.",
                 "category": "memory",
-                "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "max_results": {"type": "integer", "default": 5}}, "required": ["query"]}
+                "priority": "high",
+                "when_to_use": ["semantic_search", "context_recall", "information_retrieval"],
+                "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "max_results": {"type": "integer", "default": 10}}, "required": ["query"]}
             },
             "bb7_memory_get_insights": {
                 "name": "bb7_memory_get_insights",
                 "description": "Generate high-level insights and statistics about the memory system, including categories, importance, and usage patterns.",
                 "category": "memory",
+                "priority": "low",
+                "when_to_use": ["memory_analysis", "system_overview", "performance_metrics"],
                 "input_schema": {"type": "object", "properties": {}, "required": []}
             },
             "bb7_memory_concept_network": {
                 "name": "bb7_memory_concept_network",
                 "description": "Build and visualize the network of concepts and relationships across all memories. Use for knowledge graph analysis and discovery.",
                 "category": "memory",
-                "input_schema": {"type": "object", "properties": {}, "required": []}
+                "priority": "medium",
+                "when_to_use": ["knowledge_graph", "concept_mapping", "relationship_discovery"],
+                "input_schema": {"type": "object", "properties": {"concept": {"type": "string"}}, "required": ["concept"]}
             },
             "bb7_memory_extract_concepts": {
                 "name": "bb7_memory_extract_concepts",
                 "description": "Extract key concepts, technical terms, and important phrases from memory entries or text. Use for tagging, indexing, and semantic enrichment.",
                 "category": "memory",
+                "priority": "medium",
+                "when_to_use": ["tagging", "indexing", "semantic_enrichment"],
                 "input_schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}
             },
             "bb7_cross_session_analysis": {
                 "name": "bb7_cross_session_analysis",
                 "description": "Analyze patterns, goals, and outcomes across multiple sessions. Use for longitudinal insights and workflow optimization.",
                 "category": "sessions",
+                "priority": "medium",
+                "when_to_use": ["longitudinal_analysis", "workflow_optimization", "session_patterns"],
                 "input_schema": {"type": "object", "properties": {"days_back": {"type": "integer", "default": 30}}, "required": []}
             },
             "bb7_session_recommendations": {
                 "name": "bb7_session_recommendations",
                 "description": "Provide recommendations for next actions or improvements based on session history and patterns.",
                 "category": "sessions",
+                "priority": "medium",
+                "when_to_use": ["action_recommendations", "workflow_improvement", "session_guidance"],
                 "input_schema": {"type": "object", "properties": {}, "required": []}
             },
             "bb7_learned_patterns": {
                 "name": "bb7_learned_patterns",
                 "description": "Summarize recurring patterns, solutions, and best practices learned from past sessions and memories.",
                 "category": "sessions",
+                "priority": "medium",
+                "when_to_use": ["pattern_recognition", "best_practices", "solution_summarization"],
                 "input_schema": {"type": "object", "properties": {}, "required": []}
             },
             "bb7_session_intelligence": {
                 "name": "bb7_session_intelligence",
                 "description": "Generate a session intelligence report, highlighting key insights, breakthroughs, and cognitive metrics.",
                 "category": "sessions",
+                "priority": "medium",
+                "when_to_use": ["session_reporting", "cognitive_metrics", "insight_generation"],
                 "input_schema": {"type": "object", "properties": {}, "required": []}
             },
             "bb7_auto_memory_stats": {
                 "name": "bb7_auto_memory_stats",
                 "description": "Automatically compute and report memory usage statistics, trends, and optimization suggestions.",
                 "category": "memory",
+                "priority": "low",
+                "when_to_use": ["memory_management", "resource_optimization", "usage_analysis"],
                 "input_schema": {"type": "object", "properties": {}, "required": []}
             },
             "bb7_screen_monitor": {
                 "name": "bb7_screen_monitor",
                 "description": "Monitor the screen for visual changes over time, detecting UI updates or unexpected modifications.",
                 "category": "visual",
+                "priority": "medium",
+                "when_to_use": ["ui_monitoring", "visual_debugging", "change_detection"],
                 "input_schema": {"type": "object", "properties": {"duration": {"type": "integer", "default": 10}, "interval": {"type": "number", "default": 1.0}}, "required": []}
             },
             "bb7_visual_diff": {
                 "name": "bb7_visual_diff",
                 "description": "Compare two images or screenshots to detect and highlight visual differences.",
                 "category": "visual",
+                "priority": "medium",
+                "when_to_use": ["visual_testing", "ui_comparison", "regression_detection"],
                 "input_schema": {"type": "object", "properties": {"image1_path": {"type": "string"}, "image2_path": {"type": "string"}, "threshold": {"type": "number", "default": 0.1}}, "required": ["image1_path", "image2_path"]}
             },
             "bb7_active_window": {
                 "name": "bb7_active_window",
                 "description": "Retrieve information about the currently active window, including title and geometry.",
                 "category": "visual",
+                "priority": "low",
+                "when_to_use": ["window_management", "context_awareness", "ui_information"],
                 "input_schema": {"type": "object", "properties": {"include_geometry": {"type": "boolean", "default": True}}, "required": []}
             },
             "bb7_get_execution_audit": {
                 "name": "bb7_get_execution_audit",
                 "description": "Retrieve the audit log of recent secure Python code executions, including code, input, output, errors, and security scan results.",
                 "category": "code_analysis",
+                "priority": "low",
+                "when_to_use": ["audit_log_review", "execution_history", "security_analysis_review"],
                 "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 20}}, "required": []}
             },
             "memory": [
@@ -1312,22 +1340,7 @@ class MCPServer:
                     "category": "code_analysis",
                     "priority": "high",
                     "when_to_use": ["code_review", "quality_assessment", "security_audit", "complexity_analysis", "refactoring"],
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "Path to code file to analyze"
-                            },
-                            "analysis_types": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "default": ["syntax", "complexity", "security", "type_inference"],
-                                "description": "Types of analysis to perform"
-                            }
-                        },
-                        "required": ["file_path"]
-                    }
+                    "input_schema": {"type": "object", "properties": {"file_path": {"type": "string", "description": "Path to code file to analyze"}, "analysis_types": {"type": "array", "items": {"type": "string"}, "default": ["syntax", "complexity", "security", "type_inference"], "description": "Types of analysis to perform"}}, "required": ["file_path"]}
                 },
                 {
                     "name": "bb7_python_execute_secure",
@@ -1335,25 +1348,7 @@ class MCPServer:
                     "category": "code_analysis",
                     "priority": "medium",
                     "when_to_use": ["code_testing", "snippet_execution", "safe_evaluation", "python_analysis"],
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {
-                            "code": {
-                                "type": "string",
-                                "description": "Python code to execute"
-                            },
-                            "timeout": {
-                                "type": "integer",
-                                "default": 10,
-                                "description": "Execution timeout in seconds"
-                            },
-                            "capture_output": {
-                                "type": "boolean",
-                                "default": True
-                            }
-                        },
-                        "required": ["code"]
-                    }
+                    "input_schema": {"type": "object", "properties": {"code": {"type": "string", "description": "Python code to execute"}, "timeout": {"type": "integer", "default": 10, "description": "Execution timeout in seconds"}, "capture_output": {"type": "boolean", "default": True}}, "required": ["code"]}
                 },
                 {
                     "name": "bb7_security_audit",
@@ -1361,20 +1356,65 @@ class MCPServer:
                     "category": "code_analysis",
                     "priority": "high",
                     "when_to_use": ["security_review", "vulnerability_scan", "compliance_check", "risk_assessment"],
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {
-                            "target_path": {
-                                "type": "string",
-                                "description": "Path to file or directory to audit"                            },
-                            "security_level": {
-                                "type": "string",
-                                "enum": ["basic", "standard", "strict"],
-                                "default": "standard"
-                            }
-                        },
-                        "required": ["target_path"]
-                    }
+                    "input_schema": {"type": "object", "properties": {"target_path": {"type": "string", "description": "Path to file or directory to audit"}, "security_level": {"type": "string", "enum": ["basic", "standard", "strict"], "default": "standard"}}, "required": ["target_path"]}
+                },
+                {
+                    "name": "bb7_get_execution_audit",
+                    "description": "Retrieve the audit log of recent secure Python code executions, including code, input, output, errors, and security scan results.",
+                    "category": "code_analysis",
+                    "priority": "low",
+                    "when_to_use": ["audit_log_review", "execution_history", "security_analysis_review"],
+                    "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 20}}, "required": []}
+                }
+            ],
+            "files": [
+                {
+                    "name": "bb7_read_file",
+                    "description": "📖 Read complete contents of any file on the system. Use for understanding code, reviewing configurations, analyzing logs, or accessing any text-based content. Supports all text encodings.",
+                    "category": "files",
+                    "priority": "high",
+                    "when_to_use": ["code_review", "file_analysis", "config_check", "log_reading", "documentation"],
+                    "input_schema": {"type": "object", "properties": {"path": {"type": "string", "description": "Full or relative path to file"}}, "required": ["path"]}
+                },
+                {
+                    "name": "bb7_write_file",
+                    "description": "✍️ Create or overwrite files with new content. Use for generating code, creating documentation, saving configurations, or any file creation task. Creates directories as needed.",
+                    "category": "files",
+                    "priority": "high",
+                    "when_to_use": ["file_creation", "code_generation", "documentation", "config_save", "script_creation"],
+                    "input_schema": {"type": "object", "properties": {"path": {"type": "string", "description": "Target file path"}, "content": {"type": "string", "description": "Content to write"}}, "required": ["path", "content"]}
+                },
+                {
+                    "name": "bb7_append_file",
+                    "description": "➕ Add content to end of existing file or create new file. Use for logging, adding to existing code, or incremental file building.",
+                    "category": "files",
+                    "priority": "medium",
+                    "when_to_use": ["logging", "incremental_updates", "file_extension", "append_content"],
+                    "input_schema": {"type": "object", "properties": {"path": {"type": "string", "description": "Target file path"}, "content": {"type": "string", "description": "Content to append"}}, "required": ["path", "content"]}
+                },
+                {
+                    "name": "bb7_list_directory",
+                    "description": "📂 List directory contents with detailed file information. Use for exploring project structure, understanding codebases, or finding files. Shows sizes, timestamps, and file types.",
+                    "category": "files",
+                    "priority": "medium",
+                    "when_to_use": ["directory_exploration", "project_structure", "file_discovery", "codebase_navigation"],
+                    "input_schema": {"type": "object", "properties": {"path": {"type": "string", "description": "Directory path to list", "default": "."}}, "required": []}
+                },
+                {
+                    "name": "bb7_get_file_info",
+                    "description": "ℹ️ Get detailed information about specific file or directory including size, timestamps, permissions, and type analysis. Use for understanding file characteristics.",
+                    "category": "files",
+                    "priority": "low",
+                    "when_to_use": ["file_analysis", "metadata_check", "permissions", "file_properties"],
+                    "input_schema": {"type": "object", "properties": {"path": {"type": "string", "description": "Path to analyze"}}, "required": ["path"]}
+                },
+                {
+                    "name": "bb7_search_files",
+                    "description": "🔍 Search for files matching patterns in directory trees. Use for finding specific files, locating code patterns, or exploring large codebases. Supports glob patterns.",
+                    "category": "files",
+                    "priority": "medium",
+                    "when_to_use": ["file_discovery", "pattern_search", "codebase_exploration", "file_finding"],
+                    "input_schema": {"type": "object", "properties": {"directory": {"type": "string", "description": "Root directory to search"}, "pattern": {"type": "string", "description": "Glob pattern (e.g., '*.py', '**/*.json')"}, "max_results": {"type": "integer", "default": 50}}, "required": ["directory", "pattern"]}
                 }
             ]
         }

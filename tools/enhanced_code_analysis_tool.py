@@ -1669,17 +1669,53 @@ class CodeAnalysisTool:
         
         return "\n".join(output)
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available tools"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available tools with their metadata for MCP registration"""
         return {
-            'bb7_analyze_code_complete': lambda file_path, include_all=True:
-                self.bb7_analyze_code_complete(file_path, include_all),
-            'bb7_python_execute_secure': lambda code, input_data=None, stateless=True, dry_run=False:
-                self.bb7_python_execute_secure(code, input_data, stateless, dry_run),
-            'bb7_security_audit': lambda file_path:
-                self.bb7_security_audit(file_path),
-            'bb7_get_execution_audit': lambda limit=20:
-                self.bb7_get_execution_audit(limit)
+            'bb7_analyze_code_complete': {
+                "callable": lambda file_path, include_all=True: self.bb7_analyze_code_complete(file_path, include_all),
+                "metadata": {
+                    "name": "bb7_analyze_code_complete",
+                    "description": "🔬 ENHANCED CODE ANALYSIS: Comprehensive code analysis with Control Flow Analysis (CFA), Data Flow Analysis (DFA), type inference, complexity metrics, and security auditing. Use for deep code understanding and quality assessment.",
+                    "category": "code_analysis",
+                    "input_schema": {"type": "object", "properties": {"file_path": {"type": "string", "description": "Path to code file to analyze"}, "analysis_types": {"type": "array", "items": {"type": "string"}, "default": ["syntax", "complexity", "security", "type_inference"], "description": "Types of analysis to perform"}}, "required": ["file_path"]},
+                    "priority": "high",
+                    "when_to_use": ["code_review", "quality_assessment", "security_audit", "complexity_analysis", "refactoring"]
+                }
+            },
+            'bb7_python_execute_secure': {
+                "callable": lambda code, input_data=None, stateless=True, dry_run=False: self.bb7_python_execute_secure(code, input_data, stateless, dry_run),
+                "metadata": {
+                    "name": "bb7_python_execute_secure",
+                    "description": "🐍 SECURE EXECUTION: Execute Python code in a secure, sandboxed environment with resource limits and safety checks. Use for testing code snippets or running analysis safely.",
+                    "category": "code_analysis",
+                    "input_schema": {"type": "object", "properties": {"code": {"type": "string", "description": "Python code to execute"}, "timeout": {"type": "integer", "default": 10, "description": "Execution timeout in seconds"}, "capture_output": {"type": "boolean", "default": True}}, "required": ["code"]},
+                    "priority": "medium",
+                    "when_to_use": ["code_testing", "snippet_execution", "safe_evaluation", "python_analysis"]
+                }
+            },
+            'bb7_security_audit': {
+                "callable": lambda file_path: self.bb7_security_audit(file_path),
+                "metadata": {
+                    "name": "bb7_security_audit",
+                    "description": "🔒 SECURITY ANALYSIS: Comprehensive security audit for code including vulnerability detection, security best practices checking, and risk assessment. Use for security reviews and compliance.",
+                    "category": "code_analysis",
+                    "input_schema": {"type": "object", "properties": {"target_path": {"type": "string", "description": "Path to file or directory to audit"}, "security_level": {"type": "string", "enum": ["basic", "standard", "strict"], "default": "standard"}}, "required": ["target_path"]},
+                    "priority": "high",
+                    "when_to_use": ["security_review", "vulnerability_scan", "compliance_check", "risk_assessment"]
+                }
+            },
+            'bb7_get_execution_audit': {
+                "callable": lambda limit=20: self.bb7_get_execution_audit(limit),
+                "metadata": {
+                    "name": "bb7_get_execution_audit",
+                    "description": "Retrieve the audit log of recent secure Python code executions, including code, input, output, errors, and security scan results.",
+                    "category": "code_analysis",
+                    "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 20}}, "required": []},
+                    "priority": "low",
+                    "when_to_use": ["audit_log_review", "execution_history", "security_analysis_review"]
+                }
+            }
         }
 
 
