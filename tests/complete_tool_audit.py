@@ -8,6 +8,7 @@ import sys
 import os
 import time
 import json
+from typing import Any
 
 # Add parent directory to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,14 +22,14 @@ def audit_all_tools():
     
     # Import all tool modules
     try:
-        from tools.memory_tool import MemoryTool
-        from tools.file_tool import FileTool  
+        from tools.memory_tool import EnhancedMemoryTool
+        from tools.file_tool import FileTool
         from tools.shell_tool import ShellTool
         from tools.web_tool import WebTool
-        from tools.session_manager_tool import SessionManagerTool
+        from tools.session_manager_tool import EnhancedSessionTool
         from tools.visual_tool import VisualTool
         from tools.vscode_terminal_tool import VSCodeTerminalTool
-        from tools.auto_tool_module import AutoToolModule
+        from tools.auto_tool_module import AutoTool
         from mcp_server import MCPServer
         
         print("Successfully imported all modules")
@@ -43,14 +44,14 @@ def audit_all_tools():
     total_expected = 0
     
     modules = [
-        ("Memory", MemoryTool()),
+        ("Memory", EnhancedMemoryTool()),
         ("File", FileTool()),
         ("Shell", ShellTool()),
         ("Web", WebTool()),
-        ("Session", SessionManagerTool()),
+        ("Session", EnhancedSessionTool()),
         ("Visual", VisualTool()),
         ("Terminal", VSCodeTerminalTool()),
-        ("Auto", AutoToolModule())
+        ("Auto", AutoTool())
     ]
     
     for module_name, module_instance in modules:

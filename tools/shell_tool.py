@@ -447,17 +447,95 @@ class ShellTool:
             self.logger.error(f"Error getting system info: {e}")
             return f"Error getting system info: {str(e)}"
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available tool functions"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available shell tools with their metadata."""
         return {
-            'bb7_run_command': lambda command, working_dir=None, timeout=30: 
-                self.run_command(command, working_dir, timeout),
-            'bb7_run_script': lambda script_content, script_type="bash", working_dir=None:
-                self.run_script(script_content, script_type, working_dir),
-            'bb7_get_environment': self.get_environment,
-            'bb7_list_processes': self.list_processes,
-            'bb7_kill_process': self.kill_process,
-            'bb7_get_system_info': self.get_system_info
+            'bb7_run_command': {
+                "callable": lambda command, working_dir=None, timeout=30: self.run_command(command, working_dir, timeout),
+                "metadata": {
+                    "name": "bb7_run_command",
+                    "description": "⚡ Execute shell commands with full output capture. Use for running builds, tests, git operations, system commands, or any command-line tasks. Provides detailed execution results.",
+                    "category": "shell",
+                    "priority": "high",
+                    "when_to_use": ["builds", "tests", "git_ops", "system_commands", "installation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "command": { "type": "string", "description": "Shell command to execute" },
+                            "working_dir": { "type": "string", "description": "Working directory for command" },
+                            "timeout": { "type": "integer", "default": 30, "description": "Command timeout in seconds" }
+                        },
+                        "required": ["command"]
+                    }
+                }
+            },
+            'bb7_run_script': {
+                "callable": lambda script_content, script_type="bash", working_dir=None: self.run_script(script_content, script_type, working_dir),
+                "metadata": {
+                    "name": "bb7_run_script",
+                    "description": "📜 Execute scripts from content strings. Supports bash, python, javascript, and powershell. Use for running complex multi-line scripts or generated code without creating temporary files.",
+                    "category": "shell",
+                    "priority": "medium",
+                    "when_to_use": ["script_execution", "code_testing", "automation", "multi_line_commands"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "script_content": { "type": "string", "description": "Script content to execute" },
+                            "script_type": { "type": "string", "enum": ["bash", "python", "javascript", "powershell"], "default": "bash" },
+                            "working_dir": { "type": "string", "description": "Working directory" }
+                        },
+                        "required": ["script_content"]
+                    }
+                }
+            },
+            'bb7_get_environment': {
+                "callable": self.get_environment,
+                "metadata": {
+                    "name": "bb7_get_environment",
+                    "description": "🌍 Get comprehensive environment information including PATH, user context, installed tools, and development environment details. Use for troubleshooting, setup verification, or environment analysis.",
+                    "category": "shell",
+                    "priority": "low",
+                    "when_to_use": ["environment_check", "troubleshooting", "setup_verification", "tool_discovery"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            },
+            'bb7_list_processes': {
+                "callable": self.list_processes,
+                "metadata": {
+                    "name": "bb7_list_processes",
+                    "description": "🔄 List running system processes with CPU and memory usage. Use for system monitoring, finding processes, or understanding system state.",
+                    "category": "shell",
+                    "priority": "low",
+                    "when_to_use": ["system_monitoring", "process_discovery", "performance_analysis", "debugging"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            },
+            'bb7_kill_process': {
+                "callable": self.kill_process,
+                "metadata": {
+                    "name": "bb7_kill_process",
+                    "description": "🛑 Terminate processes by PID. Use carefully for stopping hung processes or cleaning up background tasks. Includes safety checks.",
+                    "category": "shell",
+                    "priority": "low",
+                    "when_to_use": ["process_termination", "cleanup", "hung_processes", "system_management"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "process_id": { "type": "integer", "description": "Process ID to terminate" } },
+                        "required": ["process_id"]
+                    }
+                }
+            },
+            'bb7_get_system_info': {
+                "callable": self.get_system_info,
+                "metadata": {
+                    "name": "bb7_get_system_info",
+                    "description": "💻 Get comprehensive system information including hardware, OS, CPU, memory, disk, and network details. Use for system analysis, troubleshooting, or environment documentation.",
+                    "category": "shell",
+                    "priority": "low",
+                    "when_to_use": ["system_analysis", "hardware_info", "troubleshooting", "documentation"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            }
         }
 
 

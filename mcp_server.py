@@ -1535,49 +1535,75 @@ class MCPServer:
         return matching_tools
 
     def register_tools(self):
-        """Register all available MCP tools from modules (dynamic import)"""
+        """Register all available MCP tools from modules by dynamically importing them."""
         import importlib
         import pkgutil
         import sys
+        import inspect
         from pathlib import Path
 
+        self.logger.info("Starting tool registration...")
+
+        # Keep instances of tool classes alive
+        if not hasattr(self, 'tool_instances'):
+            self.tool_instances = []
+
         tools_dir = Path(__file__).parent / "tools"
-        sys.path.insert(0, str(tools_dir.parent))  # Ensure parent dir is in sys.path
+        if str(tools_dir.parent) not in sys.path:
+            sys.path.insert(0, str(tools_dir.parent))
 
         self.tools = {}
         self.tool_registry = {}
 
         for module_info in pkgutil.iter_modules([str(tools_dir)]):
             mod_name = module_info.name
-            if mod_name.startswith("__"):  # skip __pycache__ etc
+            if mod_name.startswith("__"):
                 continue
+
             try:
                 module = importlib.import_module(f"tools.{mod_name}")
-            except Exception as e:
-                self.logger.warning(f"Failed to import tool module {mod_name}: {e}")
-                continue
-            get_tools = getattr(module, "get_tools", None)
-            if callable(get_tools):
-                try:
-                    tool_map = get_tools()
-                except Exception as e:
-                    self.logger.warning(f"get_tools() failed in {mod_name}: {e}")
-                    continue
-                for tool_name, tool_info in tool_map.items():
-                    # tool_info can be a dict with 'callable' and 'metadata', or just a callable
-                    if isinstance(tool_info, dict) and "callable" in tool_info:
-                        self.tools[tool_name] = tool_info["callable"]
-                        meta = tool_info.get("metadata", {})
-                        meta["name"] = tool_name
-                        self.tool_registry[tool_name] = meta
-                    elif callable(tool_info):
-                        self.tools[tool_name] = tool_info
-                        self.tool_registry[tool_name] = {"name": tool_name, "description": "No description", "category": "uncategorized"}
-            else:
-                self.logger.info(f"No get_tools() in {mod_name}, skipping.")
 
-        self.logger.info("Tool registration complete! %d tools available", len(self.tools))
+                # Find the primary tool class in the module (heuristic: ends with 'Tool')
+                tool_class = None
+                for name, obj in inspect.getmembers(module, inspect.isclass):
+                    if name.endswith("Tool") and obj.__module__ == module.__name__:
+                        tool_class = obj
+                        break
+
+                if not tool_class:
+                    self.logger.debug(f"No suitable *Tool class found in {mod_name}, skipping.")
+                    continue
+
+                # Instantiate the tool class and get the tools
+                tool_instance = tool_class()
+                self.tool_instances.append(tool_instance) # Keep instance alive
+
+                if not hasattr(tool_instance, 'get_tools') or not callable(getattr(tool_instance, 'get_tools')):
+                    self.logger.warning(f"No callable get_tools method found in {tool_class.__name__}, skipping.")
+                    continue
+
+                tool_map = tool_instance.get_tools()
+
+                for tool_name, tool_info in tool_map.items():
+                    if isinstance(tool_info, dict) and 'callable' in tool_info and 'metadata' in tool_info:
+                        self.tools[tool_name] = tool_info['callable']
+                        self.tool_registry[tool_name] = tool_info['metadata']
+                        self.logger.debug(f"Registered tool '{tool_name}' from {mod_name}")
+                    elif callable(tool_info):
+                        # This path is for modules that haven't been updated to the new metadata format.
+                        self.tools[tool_name] = tool_info
+                        # This is the source of the "No description" problem. We will fix this by updating the modules.
+                        self.tool_registry[tool_name] = {"name": tool_name, "description": "No description provided.", "category": "uncategorized"}
+                        self.logger.warning(f"Tool '{tool_name}' from {mod_name} is missing embedded metadata. Please update its get_tools() method.")
+                    else:
+                        self.logger.warning(f"Invalid tool info format for '{tool_name}' in {mod_name}")
+
+            except Exception as e:
+                self.logger.error(f"Failed to load or register tools from module {mod_name}: {e}")
+                self.logger.error(traceback.format_exc())
+
         self.server_info["total_tools"] = len(self.tools)
+        self.logger.info(f"Tool registration complete. Total tools: {self.server_info['total_tools']}")
         self.log_tool_summary()
 
     def log_tool_summary(self):

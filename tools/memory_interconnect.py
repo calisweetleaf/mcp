@@ -379,19 +379,77 @@ class MemoryInterconnectionEngine:
             "archive_file": str(archive_file) if archive_file else None
         }
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all memory interconnection tools with bb7_ prefix for MCP consistency"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all memory interconnection tools with their metadata."""
         return {
-            'bb7_memory_analyze_entry': lambda key, value, source="memory": 
-                self.analyze_memory_entry(key, value, source),
-            'bb7_memory_intelligent_search': lambda query, max_results=10:
-                self.intelligent_search(query, max_results),
-            'bb7_memory_get_insights': lambda:
-                self.get_memory_insights(),
-            'bb7_memory_consolidate': lambda age_threshold_days=30:
-                self.consolidate_memories(age_threshold_days),
-            'bb7_memory_concept_network': lambda concept:
-                self.get_concept_network(concept),
-            'bb7_memory_extract_concepts': lambda text:
-                self.extract_concepts(text),
+            'bb7_memory_analyze_entry': {
+                "callable": lambda key, value, source="memory": self.analyze_memory_entry(key, value, source),
+                "metadata": {
+                    "name": "bb7_memory_analyze_entry",
+                    "description": "Analyze a memory entry for key concepts, importance, and semantic connections. Use to extract insights and relationships from stored knowledge.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["knowledge_extraction", "semantic_analysis", "insight_generation"],
+                    "input_schema": {"type": "object", "properties": {"key": {"type": "string"}, "value": {"type": "string"}, "source": {"type": "string", "default": "memory"}}, "required": ["key", "value"]}
+                }
+            },
+            'bb7_memory_intelligent_search': {
+                "callable": lambda query, max_results=10: self.intelligent_search(query, max_results),
+                "metadata": {
+                    "name": "bb7_memory_intelligent_search",
+                    "description": "Search memories using semantic similarity and concept matching. Use for advanced context recall and finding related information.",
+                    "category": "memory",
+                    "priority": "high",
+                    "when_to_use": ["semantic_search", "context_recall", "information_retrieval"],
+                    "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "max_results": {"type": "integer", "default": 10}}, "required": ["query"]}
+                }
+            },
+            'bb7_memory_get_insights': {
+                "callable": self.get_memory_insights,
+                "metadata": {
+                    "name": "bb7_memory_get_insights",
+                    "description": "Generate high-level insights and statistics about the memory system, including categories, importance, and usage patterns.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["memory_analysis", "system_overview", "performance_metrics"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            'bb7_memory_consolidate': {
+                "callable": lambda age_threshold_days=30: self.consolidate_memories(age_threshold_days),
+                "metadata": {
+                    "name": "bb7_memory_consolidate",
+                    "description": "🗃️ Consolidate and archive old or low-importance memories. Use for memory optimization and long-term storage.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["archive", "optimize", "cleanup"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "days_old": {"type": "integer", "default": 30, "description": "Archive memories older than this (optional)"} },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_memory_concept_network': {
+                "callable": self.get_concept_network,
+                "metadata": {
+                    "name": "bb7_memory_concept_network",
+                    "description": "Build and visualize the network of concepts and relationships across all memories. Use for knowledge graph analysis and discovery.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["knowledge_graph", "concept_mapping", "relationship_discovery"],
+                    "input_schema": {"type": "object", "properties": {"concept": {"type": "string"}}, "required": ["concept"]}
+                }
+            },
+            'bb7_memory_extract_concepts': {
+                "callable": self.extract_concepts,
+                "metadata": {
+                    "name": "bb7_memory_extract_concepts",
+                    "description": "Extract key concepts, technical terms, and important phrases from memory entries or text. Use for tagging, indexing, and semantic enrichment.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["tagging", "indexing", "semantic_enrichment"],
+                    "input_schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}
+                }
+            }
         }
