@@ -166,10 +166,8 @@ class MCPServer:
 
     def _init_memory(self):
         """Initializes persistent memory subsystem if available."""
-        from tools.memory_tool import EnhancedMemoryTool  # type: ignore
-        self.memory = EnhancedMemoryTool()
-        self.logger.info('EnhancedMemoryTool initialized.')
         try:
+            from tools.memory_tool import EnhancedMemoryTool  # type: ignore
             self.memory = EnhancedMemoryTool()
             self.logger.info('EnhancedMemoryTool initialized.')
         except Exception as e:
@@ -415,45 +413,19 @@ class MCPServer:
             self.logger.error("Server not initialized. Cannot start.")
             return
 
-        if not self._initialized:
-            self.logger.error("Server not initialized. Cannot start.")
-            return
-
         # Prefer fastmcp if available; fallback to jsonrpcserver
         try:
-            try:
-                from fastmcp import FastMCP
-                use_fastmcp = True
-            except ImportError:
-                use_fastmcp = False
-
-            if use_fastmcp:
-                app = FastMCP(__name__)
-
-                # Register tools with FastMCP
-                for tool_name, tool_callable in self.tools.items():
-            if use_fastmcp:
-                app = FastMCP(__name__)
-
-                # Register tools with FastMCP
-                for tool_name, tool_callable in self.tools.items():
-                    # fastmcp expects callables; we wrap to standardize return
-                    def _fast_wrapper(_name: str):
-                        def inner(**kwargs):
-                            self.logger.info(f"Received FastMCP call for tool: {_name} with args: {kwargs}")
-                            result = self.call_tool(_name, **kwargs)
-                            if not result.get("success"):
-                                raise RuntimeError(result.get("message", "Tool execution failed"))
-                            return result.get("result")
-                        return inner
-                    app.tool(tool_name)(_fast_wrapper(tool_name))
-
             from jsonrpcserver import serve
-            from jsonrpcserver.methods import Methods as RPCMethods
+            from jsonrpcserver.methods import Methods
             from jsonrpcserver.exceptions import JsonRpcError
 
-            methods = RPCMethods()
-            try:
+            methods = Methods()
+
+            # Register all tools as JSON-RPC methods
+            for tool_name in self.tools:
+                def _tool_wrapper(tool_name=tool_name):
+                    def handler(**kwargs):
+                        try:
                             self.logger.info(f"Received RPC call for tool: {tool_name} with args: {kwargs}")
                             result = self.call_tool(tool_name, **kwargs)
                             if not result.get("success"):
@@ -465,85 +437,78 @@ class MCPServer:
                                     error_code = -32602  # Invalid params
                                 raise JsonRpcError(error_message, code=error_code, data=result)
                             return result.get("result")
-                            except JsonRpcError:
+                        except JsonRpcError:
                             raise
-                            except Exception as ex:
+                        except Exception as ex:
                             self.logger.error(f"Error in RPC tool wrapper for {tool_name}: {ex}")
                             self.logger.error(traceback.format_exc())
                             raise JsonRpcError(f"Internal server error during tool execution: {ex}", code=-32000)
-                            return handler
+                    return handler
 
-            methods.add(_tool_wrapper(), name=tool_name)
+                methods.register(_tool_wrapper(), name=tool_name)
 
-            self.logger.info(f"Starting MCP Server (jsonrpcserver) on {host}:{port}...")
+            self.logger.info(f"Starting MCP Server on {host}:{port}...")
             self.logger.info("Press Ctrl+C to shut down.")
+            serve(methods, host=host, port=port)
+                
         except ImportError:
             self.logger.error("Neither fastmcp nor jsonrpcserver is available. Please install one:\n"
                               "pip install fastmcp\nor\npip install jsonrpcserver")
 
             # Flush session tracking
-            if hasattr(self, "sessions") and isinstance(self.sessions, dict):
+    def shutdown(self):
+        """Gracefully shutdown the server and clean up resources."""
+        self.logger.info("Shutting down MCP Server...")
+        
+        # Flush session tracking
+        if hasattr(self, "sessions") and isinstance(self.sessions, dict):
+            try:
+                # Persist a minimal session snapshot
+                snapshot = {
+                    "active_sessions": list(self.sessions.keys()),
+                    "last_activity": self.performance_metrics.get("last_activity"),
+                    "timestamp": time.time(),
+                }
+                sessions_dir = self.data_dir / "sessions"
+                sessions_dir.mkdir(parents=True, exist_ok=True)
+                with open(sessions_dir / "last_shutdown.json", "w", encoding="utf-8") as f:
+                    json.dump(snapshot, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                self.logger.warning(f"Failed to persist session snapshot: {e}")
+
+        # Persist L1 cache to L2 (memory) best-effort
+        try:
+            if self._l1_cache:
+                with self._cache_lock:
+                    for key, (expiry, value) in list(self._l1_cache.items()):
+                        ttl = None
+                        if expiry is not None:
+                            ttl = max(0.0, expiry - time.time())
+                        self._l2_set(key, value, ttl)
+        except Exception as e:
+            self.logger.warning(f"Failed to persist L1 cache to memory: {e}")
+
+        # Give tools a chance to cleanup if they expose a shutdown/close method
+        try:
+            for name, instance in getattr(self, "tool_instances", {}).items():
                 try:
-                    # Persist a minimal session snapshot
-                    snapshot = {
-                        "active_sessions": list(self.sessions.keys()),
-                        "last_activity": self.performance_metrics.get("last_activity"),
-                        "timestamp": time.time(),
-                    }
-                    sessions_dir = self.data_dir / "sessions"
-                    sessions_dir.mkdir(parents=True, exist_ok=True)
-                    with open(sessions_dir / "last_shutdown.json", "w", encoding="utf-8") as f:
-                        json.dump(snapshot, f, ensure_ascii=False, indent=2)
-                except Exception as e:
-                    self.logger.warning(f"Failed to persist session snapshot: {e}")
+                    if hasattr(instance, "shutdown") and callable(getattr(instance, "shutdown")):
+                        instance.shutdown()
+                    elif hasattr(instance, "close") and callable(getattr(instance, "close")):
+                        instance.close()
+                except Exception as tool_err:
+                    self.logger.debug(f"Tool '{name}' cleanup error: {tool_err}")
+        except Exception as e:
+            self.logger.warning(f"Tool cleanup sweep failed: {e}")
 
-            # Persist L1 cache to L2 (memory) best-effort
-            try:
-                if self._l1_cache:
-                    with self._cache_lock:
-                        for key, (expiry, value) in list(self._l1_cache.items()):
-                            ttl = None
-                            if expiry is not None:
-                                ttl = max(0.0, expiry - time.time())
-                            self._l2_set(key, value, ttl)
-            except Exception as e:
-                self.logger.warning(f"Failed to persist L1 cache to memory: {e}")
+        # Attempt to flush memory tool if it supports it
+        try:
+            if self.memory and hasattr(self.memory, "flush") and callable(getattr(self.memory, "flush")):
+                self.memory.flush()
+        except Exception as e:
+            self.logger.debug(f"Memory flush failed: {e}")
 
-            # Give tools a chance to cleanup if they expose a shutdown/close method
-            try:
-                for name, instance in getattr(self, "tool_instances", {}).items():
-                    try:
-                        if hasattr(instance, "shutdown") and callable(getattr(instance, "shutdown")):
-                            instance.shutdown()
-                        elif hasattr(instance, "close") and callable(getattr(instance, "close")):
-                            instance.close()
-                    except Exception as tool_err:
-                        self.logger.debug(f"Tool '{name}' cleanup error: {tool_err}")
-            except Exception as e:
-                self.logger.warning(f"Tool cleanup sweep failed: {e}")
 
-            # Attempt to flush memory tool if it supports it
-            try:
-                if self.memory and hasattr(self.memory, "flush") and callable(getattr(self.memory, "flush")):
-                    self.memory.flush()
-            except Exception as e:
-                self.logger.debug(f"Memory flush failed: {e}")
-if __name__ == '__main__':
-    # Configure logging for console output as well
-    console_handler = logging.StreamHandler(stream=sys.stdout)
-    console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
-if __name__ == '__main__':
-    # Configure logging for console output as well
-    console_handler = logging.StreamHandler(stream=sys.stdout)
-    console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
-    root_logger = logging.getLogger('SovereignMCP')
-    if not root_logger.hasHandlers():
-        root_logger.addHandler(console_handler)
-    else:
-        root_logger.addHandler(console_handler)
-    root_logger.setLevel(logging.INFO)
-
-    server = MCPServer()
 if __name__ == '__main__':
     # Configure logging for console output as well
     console_handler = logging.StreamHandler(stream=sys.stdout)
