@@ -74,8 +74,212 @@ class MCPServer:
             "last_activity": time.time()
         }
         
-        # Comprehensive Tool Registry for AI Guidance
-        self.tool_registry = {            "auto_activation": [
+        # Comprehensive Tool Registry for AI Guidance (flat dict, all tools by name)
+        self.tool_registry = {
+            "bb7_memory_analyze_entry": {
+                "name": "bb7_memory_analyze_entry",
+                "description": "Analyze a memory entry for key concepts, importance, and semantic connections. Use to extract insights and relationships from stored knowledge.",
+                "category": "memory",
+                "input_schema": {"type": "object", "properties": {"key": {"type": "string"}, "value": {"type": "string"}, "source": {"type": "string"}}, "required": ["key", "value"]}
+            },
+            "bb7_memory_intelligent_search": {
+                "name": "bb7_memory_intelligent_search",
+                "description": "Search memories using semantic similarity and concept matching. Use for advanced context recall and finding related information.",
+                "category": "memory",
+                "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "max_results": {"type": "integer", "default": 5}}, "required": ["query"]}
+            },
+            "bb7_memory_get_insights": {
+                "name": "bb7_memory_get_insights",
+                "description": "Generate high-level insights and statistics about the memory system, including categories, importance, and usage patterns.",
+                "category": "memory",
+                "input_schema": {"type": "object", "properties": {}, "required": []}
+            },
+            "bb7_memory_concept_network": {
+                "name": "bb7_memory_concept_network",
+                "description": "Build and visualize the network of concepts and relationships across all memories. Use for knowledge graph analysis and discovery.",
+                "category": "memory",
+                "input_schema": {"type": "object", "properties": {}, "required": []}
+            },
+            "bb7_memory_extract_concepts": {
+                "name": "bb7_memory_extract_concepts",
+                "description": "Extract key concepts, technical terms, and important phrases from memory entries or text. Use for tagging, indexing, and semantic enrichment.",
+                "category": "memory",
+                "input_schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}
+            },
+            "bb7_cross_session_analysis": {
+                "name": "bb7_cross_session_analysis",
+                "description": "Analyze patterns, goals, and outcomes across multiple sessions. Use for longitudinal insights and workflow optimization.",
+                "category": "sessions",
+                "input_schema": {"type": "object", "properties": {"days_back": {"type": "integer", "default": 30}}, "required": []}
+            },
+            "bb7_session_recommendations": {
+                "name": "bb7_session_recommendations",
+                "description": "Provide recommendations for next actions or improvements based on session history and patterns.",
+                "category": "sessions",
+                "input_schema": {"type": "object", "properties": {}, "required": []}
+            },
+            "bb7_learned_patterns": {
+                "name": "bb7_learned_patterns",
+                "description": "Summarize recurring patterns, solutions, and best practices learned from past sessions and memories.",
+                "category": "sessions",
+                "input_schema": {"type": "object", "properties": {}, "required": []}
+            },
+            "bb7_session_intelligence": {
+                "name": "bb7_session_intelligence",
+                "description": "Generate a session intelligence report, highlighting key insights, breakthroughs, and cognitive metrics.",
+                "category": "sessions",
+                "input_schema": {"type": "object", "properties": {}, "required": []}
+            },
+            "bb7_auto_memory_stats": {
+                "name": "bb7_auto_memory_stats",
+                "description": "Automatically compute and report memory usage statistics, trends, and optimization suggestions.",
+                "category": "memory",
+                "input_schema": {"type": "object", "properties": {}, "required": []}
+            },
+            "bb7_screen_monitor": {
+                "name": "bb7_screen_monitor",
+                "description": "Monitor the screen for visual changes over time, detecting UI updates or unexpected modifications.",
+                "category": "visual",
+                "input_schema": {"type": "object", "properties": {"duration": {"type": "integer", "default": 10}, "interval": {"type": "number", "default": 1.0}}, "required": []}
+            },
+            "bb7_visual_diff": {
+                "name": "bb7_visual_diff",
+                "description": "Compare two images or screenshots to detect and highlight visual differences.",
+                "category": "visual",
+                "input_schema": {"type": "object", "properties": {"image1_path": {"type": "string"}, "image2_path": {"type": "string"}, "threshold": {"type": "number", "default": 0.1}}, "required": ["image1_path", "image2_path"]}
+            },
+            "bb7_active_window": {
+                "name": "bb7_active_window",
+                "description": "Retrieve information about the currently active window, including title and geometry.",
+                "category": "visual",
+                "input_schema": {"type": "object", "properties": {"include_geometry": {"type": "boolean", "default": True}}, "required": []}
+            },
+            "bb7_get_execution_audit": {
+                "name": "bb7_get_execution_audit",
+                "description": "Retrieve the audit log of recent secure Python code executions, including code, input, output, errors, and security scan results.",
+                "category": "code_analysis",
+                "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "default": 20}}, "required": []}
+            },
+            "memory": [
+                {
+                    "name": "bb7_memory_store",
+                    "description": "💾 Store a key-value pair in persistent memory with category, importance, and tags. Use for project context, insights, decisions, or any information that should persist across sessions.",
+                    "category": "memory",
+                    "priority": "critical",
+                    "when_to_use": ["project_context", "insights", "decisions", "persistent_data", "knowledge_base"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Unique memory key (e.g. 'project:status')"},
+                            "value": {"type": "string", "description": "Value to store (text, JSON, etc.)"},
+                            "category": {"type": "string", "description": "Category for organization (optional)"},
+                            "importance": {"type": "number", "default": 0.5, "description": "Importance score 0-1 (optional)"},
+                            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for search/filtering (optional)"}
+                        },
+                        "required": ["key", "value"]
+                    }
+                },
+                {
+                    "name": "bb7_memory_retrieve",
+                    "description": "🔍 Retrieve a value from persistent memory by key, with optional related memories. Use for context recall, project history, or knowledge lookup.",
+                    "category": "memory",
+                    "priority": "high",
+                    "when_to_use": ["context_recall", "history", "lookup", "knowledge_retrieval"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Memory key to retrieve"},
+                            "include_related": {"type": "boolean", "default": False, "description": "Include related memories (optional)"}
+                        },
+                        "required": ["key"]
+                    }
+                },
+                {
+                    "name": "bb7_memory_delete",
+                    "description": "🗑️ Delete a key from persistent memory. Use for cleanup, removing outdated or incorrect information.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["cleanup", "remove_outdated", "delete_incorrect"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Memory key to delete"}
+                        },
+                        "required": ["key"]
+                    }
+                },
+                {
+                    "name": "bb7_memory_list",
+                    "description": "📚 List memory keys with optional filtering by prefix, category, importance, or sort order. Use to discover available context and knowledge.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["explore_memory", "context_discovery", "knowledge_audit"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "prefix": {"type": "string", "description": "Filter keys by prefix (optional)"},
+                            "category": {"type": "string", "description": "Filter by category (optional)"},
+                            "min_importance": {"type": "number", "default": 0.0, "description": "Minimum importance (optional)"},
+                            "sort_by": {"type": "string", "enum": ["timestamp", "importance", "access", "alphabetical"], "default": "timestamp", "description": "Sort order (optional)"}
+                        },
+                        "required": []
+                    }
+                },
+                {
+                    "name": "bb7_memory_search",
+                    "description": "🔎 Search memory using semantic or text matching. Use for finding relevant knowledge, context, or related information.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["search", "semantic_lookup", "find_related"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string", "description": "Search query"},
+                            "max_results": {"type": "integer", "default": 5, "description": "Max results (optional)"}
+                        },
+                        "required": ["query"]
+                    }
+                },
+                {
+                    "name": "bb7_memory_stats",
+                    "description": "📊 Get statistics about memory usage, entry counts, and storage patterns. Use for memory management and analysis.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["memory_management", "usage_stats", "analysis"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                },
+                {
+                    "name": "bb7_memory_insights",
+                    "description": "🧠 Get high-level insights about memory system, including categories, importance, and usage patterns. Use for knowledge management and optimization.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["insights", "knowledge_management", "optimization"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                },
+                {
+                    "name": "bb7_memory_consolidate",
+                    "description": "🗃️ Consolidate and archive old or low-importance memories. Use for memory optimization and long-term storage.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["archive", "optimize", "cleanup"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "days_old": {"type": "integer", "default": 30, "description": "Archive memories older than this (optional)"}
+                        },
+                        "required": []
+                    }
+                },
+                {
+                    "name": "bb7_memory_categories",
+                    "description": "🏷️ List all available memory categories and their descriptions. Use for organizing and tagging knowledge.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["organization", "tagging", "category_discovery"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            ],
+            "auto_activation": [
                 {
                     "name": "bb7_workspace_context_loader",
                     "description": "🚀 ALWAYS RUN FIRST: Automatically loads relevant project context, active sessions, recent memories, and current workspace state. Essential for understanding where we left off and maintaining seamless continuity across coding sessions.",
@@ -160,7 +364,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "analyze_project_structure",
+                    "name": "bb7_analyze_project_structure",
                     "description": "📊 Comprehensive project analysis including file structure, dependencies, and architecture insights. Use when starting work on new projects or when architectural understanding is needed.",
                     "category": "auto_activation",
                     "priority": "medium",
@@ -168,38 +372,34 @@ class MCPServer:
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "project_path": {
-                                "type": "string",
-                                "description": "Path to project root"
+                            "max_depth": {
+                                "type": "integer",
+                                "default": 3,
+                                "description": "Maximum directory depth to analyze"
                             },
-                            "analysis_depth": {
-                                "type": "string",
-                                "enum": ["shallow", "medium", "deep"],
-                                "default": "medium"
+                            "include_hidden": {
+                                "type": "boolean",
+                                "default": False,
+                                "description": "Include hidden files and directories"
                             }
                         },
                         "required": []
                     }
                 },
                 {
-                    "name": "get_project_dependencies",
+                    "name": "bb7_get_project_dependencies",
                     "description": "📦 Analyze and list project dependencies, package.json, requirements.txt, etc. Use when understanding project setup or troubleshooting dependency issues.",
                     "category": "auto_activation",
                     "priority": "medium",
                     "when_to_use": ["dependency_analysis", "setup_issues", "environment_check", "build_problems"],
                     "input_schema": {
                         "type": "object",
-                        "properties": {
-                            "project_path": {
-                                "type": "string",
-                                "description": "Path to project root"
-                            }
-                        },
+                        "properties": {},
                         "required": []
                     }
                 },
                 {
-                    "name": "get_recent_changes",
+                    "name": "bb7_get_recent_changes",
                     "description": "🔄 Get recent git changes, modified files, and development activity. Use when understanding recent work or catching up on project changes.",
                     "category": "auto_activation",
                     "priority": "medium",
@@ -219,91 +419,125 @@ class MCPServer:
             ],            "memory": [
                 {
                     "name": "bb7_memory_store",
-                    "description": "💾 Store critical information in persistent global memory that survives across ALL coding sessions. Use for: project context, important decisions, architectural insights, user preferences, recurring issues, learning patterns, and any context that should NEVER be lost. Essential for building long-term collaborative intelligence.",
+                    "description": "💾 Store a key-value pair in persistent memory with category, importance, and tags. Use for project context, insights, decisions, or any information that should persist across sessions.",
                     "category": "memory",
                     "priority": "critical",
-                    "when_to_use": ["important_decisions", "project_context", "user_preferences", "architectural_insights", "lessons_learned"],
+                    "when_to_use": ["project_context", "insights", "decisions", "persistent_data", "knowledge_base"],
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "key": {
-                                "type": "string", 
-                                "description": "Unique identifier - use hierarchical naming like 'project:myapp:architecture' or 'user:preferences:coding_style'"
-                            },
-                            "value": {
-                                "type": "string",
-                                "description": "The information to store - can be text, JSON, insights, or any contextual data"
-                            }
+                            "key": {"type": "string", "description": "Unique memory key (e.g. 'project:status')"},
+                            "value": {"type": "string", "description": "Value to store (text, JSON, etc.)"},
+                            "category": {"type": "string", "description": "Category for organization (optional)"},
+                            "importance": {"type": "number", "default": 0.5, "description": "Importance score 0-1 (optional)"},
+                            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags for search/filtering (optional)"}
                         },
                         "required": ["key", "value"]
                     }
                 },
                 {
                     "name": "bb7_memory_retrieve",
-                    "description": "🔍 Retrieve stored context from persistent memory. Use frequently to maintain continuity, recall previous decisions, understand project history, and avoid asking user to repeat information they've already provided.",
+                    "description": "🔍 Retrieve a value from persistent memory by key, with optional related memories. Use for context recall, project history, or knowledge lookup.",
                     "category": "memory",
                     "priority": "high",
-                    "when_to_use": ["context_recall", "decision_history", "project_continuity", "preference_lookup"],
+                    "when_to_use": ["context_recall", "history", "lookup", "knowledge_retrieval"],
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "key": {
-                                "type": "string",
-                                "description": "The memory key to retrieve"
-                            }
+                            "key": {"type": "string", "description": "Memory key to retrieve"},
+                            "include_related": {"type": "boolean", "default": False, "description": "Include related memories (optional)"}
+                        },
+                        "required": ["key"]
+                    }
+                },
+                {
+                    "name": "bb7_memory_delete",
+                    "description": "🗑️ Delete a key from persistent memory. Use for cleanup, removing outdated or incorrect information.",
+                    "category": "memory",
+                    "priority": "medium",
+                    "when_to_use": ["cleanup", "remove_outdated", "delete_incorrect"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string", "description": "Memory key to delete"}
                         },
                         "required": ["key"]
                     }
                 },
                 {
                     "name": "bb7_memory_list",
-                    "description": "📚 Browse available memory keys to discover stored context. Use when you need to understand what information is available, explore project history, or find relevant stored insights. Great for context discovery.",
+                    "description": "📚 List memory keys with optional filtering by prefix, category, importance, or sort order. Use to discover available context and knowledge.",
                     "category": "memory",
                     "priority": "medium",
-                    "when_to_use": ["context_discovery", "memory_exploration", "available_info", "knowledge_audit"],
+                    "when_to_use": ["explore_memory", "context_discovery", "knowledge_audit"],
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "prefix": {
-                                "type": "string",
-                                "description": "Filter keys by prefix (e.g., 'project:' or 'user:')"
-                            }
+                            "prefix": {"type": "string", "description": "Filter keys by prefix (optional)"},
+                            "category": {"type": "string", "description": "Filter by category (optional)"},
+                            "min_importance": {"type": "number", "default": 0.0, "description": "Minimum importance (optional)"},
+                            "sort_by": {"type": "string", "enum": ["timestamp", "importance", "access", "alphabetical"], "default": "timestamp", "description": "Sort order (optional)"}
                         },
                         "required": []
                     }
                 },
                 {
-                    "name": "bb7_memory_delete",
-                    "description": "🗑️ Remove outdated or incorrect information from memory. Use when context has changed, decisions have been reversed, or information is no longer relevant.",
+                    "name": "bb7_memory_search",
+                    "description": "🔎 Search memory using semantic or text matching. Use for finding relevant knowledge, context, or related information.",
                     "category": "memory",
-                    "priority": "low",
-                    "when_to_use": ["outdated_info", "context_changed", "cleanup", "incorrect_data"],
+                    "priority": "medium",
+                    "when_to_use": ["search", "semantic_lookup", "find_related"],
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "key": {
-                                "type": "string",
-                                "description": "Memory key to delete"
-                            }
+                            "query": {"type": "string", "description": "Search query"},
+                            "max_results": {"type": "integer", "default": 5, "description": "Max results (optional)"}
                         },
-                        "required": ["key"]
+                        "required": ["query"]
                     }
-                },                {
+                },
+                {
                     "name": "bb7_memory_stats",
-                    "description": "📊 Get overview of memory usage, storage patterns, and data insights. Useful for understanding the scope of stored context and managing memory efficiently.",
+                    "description": "📊 Get statistics about memory usage, entry counts, and storage patterns. Use for memory management and analysis.",
                     "category": "memory",
                     "priority": "low",
-                    "when_to_use": ["memory_analysis", "storage_overview", "usage_stats", "cleanup_planning"],
+                    "when_to_use": ["memory_management", "usage_stats", "analysis"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                },
+                {
+                    "name": "bb7_memory_insights",
+                    "description": "🧠 Get high-level insights about memory system, including categories, importance, and usage patterns. Use for knowledge management and optimization.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["insights", "knowledge_management", "optimization"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                },
+                {
+                    "name": "bb7_memory_consolidate",
+                    "description": "🗃️ Consolidate and archive old or low-importance memories. Use for memory optimization and long-term storage.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["archive", "optimize", "cleanup"],
                     "input_schema": {
                         "type": "object",
-                        "properties": {},
+                        "properties": {
+                            "days_old": {"type": "integer", "default": 30, "description": "Archive memories older than this (optional)"}
+                        },
                         "required": []
                     }
+                },
+                {
+                    "name": "bb7_memory_categories",
+                    "description": "🏷️ List all available memory categories and their descriptions. Use for organizing and tagging knowledge.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["organization", "tagging", "category_discovery"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
                 }
             ],
             "sessions": [
                 {
-                    "name": "start_session",
+                    "name": "bb7_start_session",
                     "description": "🎯 Begin a new cognitive development session with goal tracking, episodic memory, and workflow recording. Use when starting significant work, tackling new problems, or beginning focused development sessions. Creates structured memory for complex tasks.",
                     "category": "sessions",
                     "priority": "high",
@@ -329,7 +563,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "log_event",
+                    "name": "bb7_log_event",
                     "description": "📝 Record significant events, decisions, discoveries, or problems in the current session timeline. Use to build episodic memory of development process, track decision rationale, and create searchable development history.",
                     "category": "sessions",
                     "priority": "medium",
@@ -354,7 +588,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "capture_insight",
+                    "name": "bb7_capture_insight",
                     "description": "💡 Record semantic insights, architectural understanding, or conceptual breakthroughs. Use when you or the user gain important understanding about the codebase, design patterns, or problem domain. Builds conceptual knowledge base.",
                     "category": "sessions",
                     "priority": "medium",
@@ -380,7 +614,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "record_workflow",
+                    "name": "bb7_record_workflow",
                     "description": "⚙️ Document successful workflows, processes, or step-by-step procedures for future reuse. Use when you discover effective approaches, solve complex problems, or establish repeatable processes. Builds procedural knowledge.",
                     "category": "sessions",
                     "priority": "medium",
@@ -406,7 +640,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "update_focus",
+                    "name": "bb7_update_focus",
                     "description": "🎯 Update current attention focus and energy state. Use when switching contexts, changing priorities, or when user's focus shifts. Helps maintain awareness of current cognitive state and priorities.",
                     "category": "sessions",
                     "priority": "low",
@@ -434,7 +668,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "pause_session",
+                    "name": "bb7_pause_session",
                     "description": "⏸️ Pause current session with state preservation. Use when taking breaks, switching tasks, or ending work sessions. Captures environment state for seamless resumption.",
                     "category": "sessions",
                     "priority": "medium",
@@ -451,7 +685,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "resume_session",
+                    "name": "bb7_resume_session",
                     "description": "▶️ Resume a previously paused session with full context restoration. Use when continuing interrupted work or returning to previous tasks. Provides seamless continuity.",
                     "category": "sessions",
                     "priority": "medium",
@@ -468,7 +702,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "list_sessions",
+                    "name": "bb7_list_sessions",
                     "description": "📋 View all development sessions with status and context. Use to understand work history, find interrupted tasks, or choose which session to resume.",
                     "category": "sessions",
                     "priority": "low",
@@ -489,7 +723,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "get_session_summary",
+                    "name": "bb7_get_session_summary",
                     "description": "📊 Get detailed summary of specific session including events, insights, and outcomes. Use to understand context of previous work or communicate progress.",
                     "category": "sessions",
                     "priority": "low",
@@ -508,7 +742,7 @@ class MCPServer:
             ],
             "files": [
                 {
-                    "name": "read_file",
+                    "name": "bb7_read_file",
                     "description": "📖 Read complete contents of any file on the system. Use for understanding code, reviewing configurations, analyzing logs, or accessing any text-based content. Supports all text encodings.",
                     "category": "files",
                     "priority": "high",
@@ -525,7 +759,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "write_file",
+                    "name": "bb7_write_file",
                     "description": "✍️ Create or overwrite files with new content. Use for generating code, creating documentation, saving configurations, or any file creation task. Creates directories as needed.",
                     "category": "files",
                     "priority": "high",
@@ -546,7 +780,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "append_file",
+                    "name": "bb7_append_file",
                     "description": "➕ Add content to end of existing file or create new file. Use for logging, adding to existing code, or incremental file building.",
                     "category": "files",
                     "priority": "medium",
@@ -567,7 +801,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "list_directory",
+                    "name": "bb7_list_directory",
                     "description": "📂 List directory contents with detailed file information. Use for exploring project structure, understanding codebases, or finding files. Shows sizes, timestamps, and file types.",
                     "category": "files",
                     "priority": "medium",
@@ -584,7 +818,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "get_file_info",
+                    "name": "bb7_get_file_info",
                     "description": "ℹ️ Get detailed information about specific file or directory including size, timestamps, permissions, and type analysis. Use for understanding file characteristics.",
                     "category": "files",
                     "priority": "low",
@@ -601,7 +835,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "search_files",
+                    "name": "bb7_search_files",
                     "description": "🔍 Search for files matching patterns in directory trees. Use for finding specific files, locating code patterns, or exploring large codebases. Supports glob patterns.",
                     "category": "files",
                     "priority": "medium",
@@ -628,7 +862,7 @@ class MCPServer:
             ],
             "shell": [
                 {
-                    "name": "run_command",
+                    "name": "bb7_run_command",
                     "description": "⚡ Execute shell commands with full output capture. Use for running builds, tests, git operations, system commands, or any command-line tasks. Provides detailed execution results.",
                     "category": "shell",
                     "priority": "high",
@@ -654,7 +888,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "run_script",
+                    "name": "bb7_run_script",
                     "description": "📜 Execute scripts from content strings. Supports bash, python, javascript, and powershell. Use for running complex multi-line scripts or generated code without creating temporary files.",
                     "category": "shell",
                     "priority": "medium",
@@ -680,7 +914,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "get_environment",
+                    "name": "bb7_get_environment",
                     "description": "🌍 Get comprehensive environment information including PATH, user context, installed tools, and development environment details. Use for troubleshooting, setup verification, or environment analysis.",
                     "category": "shell",
                     "priority": "low",
@@ -692,7 +926,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "list_processes",
+                    "name": "bb7_list_processes",
                     "description": "🔄 List running system processes with CPU and memory usage. Use for system monitoring, finding processes, or understanding system state.",
                     "category": "shell",
                     "priority": "low",
@@ -704,7 +938,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "kill_process",
+                    "name": "bb7_kill_process",
                     "description": "🛑 Terminate processes by PID. Use carefully for stopping hung processes or cleaning up background tasks. Includes safety checks.",
                     "category": "shell",
                     "priority": "low",
@@ -721,7 +955,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "get_system_info",
+                    "name": "bb7_get_system_info",
                     "description": "💻 Get comprehensive system information including hardware, OS, CPU, memory, disk, and network details. Use for system analysis, troubleshooting, or environment documentation.",
                     "category": "shell",
                     "priority": "low",
@@ -735,7 +969,7 @@ class MCPServer:
             ],
             "web": [
                 {
-                    "name": "fetch_url",
+                    "name": "bb7_fetch_url",
                     "description": "🌐 Fetch content from URLs via HTTP. Use for accessing documentation, APIs, downloading resources, or gathering web-based information. Supports headers and timeouts.",
                     "category": "web",
                     "priority": "medium",
@@ -760,7 +994,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "download_file",
+                    "name": "bb7_download_file",
                     "description": "⬇️ Download files from URLs to local filesystem. Use for fetching resources, documentation, or any web-based assets needed for development.",
                     "category": "web",
                     "priority": "medium",
@@ -785,7 +1019,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "check_url_status",
+                    "name": "bb7_check_url_status",
                     "description": "🔍 Check URL accessibility and get response headers. Use for testing APIs, verifying links, or troubleshooting web connectivity.",
                     "category": "web",
                     "priority": "low",
@@ -802,7 +1036,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "search_web",
+                    "name": "bb7_search_web",
                     "description": "🔎 Search the web using DuckDuckGo for quick information lookup. Use when you need current information, documentation links, or research assistance.",
                     "category": "web",
                     "priority": "medium",
@@ -823,7 +1057,7 @@ class MCPServer:
                     }
                 },
                 {
-                    "name": "extract_links",
+                    "name": "bb7_extract_links",
                     "description": "🔗 Extract all links from webpages in structured format. Use for analyzing websites, finding documentation links, or building link repositories.",
                     "category": "web",
                     "priority": "low",
@@ -1206,22 +1440,23 @@ class MCPServer:
                 "reason": "Load workspace context and active sessions"
             })
         
-        # Add category-specific recommendations
+        # Add category-specific recommendations (flat registry)
+        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         for category in detected_intents:
-            if category in self.tool_registry:
-                top_tools = sorted(
-                    self.tool_registry[category], 
-                    key=lambda x: {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(x.get("priority", "low"), 3)
-                )[:2]  # Top 2 tools per category
-                
-                for tool in top_tools:
-                    guidance["recommended_tools"].append({
-                        "name": tool["name"],
-                        "category": category,
-                        "priority": tool.get("priority", "medium").upper(),
-                        "reason": tool["description"][:100] + "..."
-                    })
-        
+            # Only process dict values (ignore lists/invalids)
+            tools_in_category = [tool for tool in self.tool_registry.values() if isinstance(tool, dict) and tool.get("category", "unknown") == category]
+            top_tools = sorted(
+                tools_in_category,
+                key=lambda x: priority_order.get(x.get("priority", "low"), 3)
+            )[:2]  # Top 2 tools per category
+            for tool in top_tools:
+                guidance["recommended_tools"].append({
+                    "name": tool["name"],
+                    "category": category,
+                    "priority": tool.get("priority", "medium").upper(),
+                    "reason": tool["description"][:100] + "..."
+                })
+
         # Add workflow suggestions
         if "memory" in detected_intents:
             guidance["workflow_suggestions"].append("Consider using memory_store to save important context")
@@ -1229,144 +1464,131 @@ class MCPServer:
             guidance["workflow_suggestions"].append("Use read_file first, then analyze content")
         if "sessions" in detected_intents:
             guidance["workflow_suggestions"].append("Start with start_session to track your work")
-        
+
         guidance["context_tips"] = [
             "Use memory tools to maintain context across conversations",
             "Start sessions for complex multi-step tasks",
             "Capture insights and decisions for future reference",
             "Use visual tools when UI debugging is needed"
         ]
-        
+
         return guidance
-    
+
     def get_tool_by_category(self, category: str) -> List[Dict[str, Any]]:
-        """Get all tools in a specific category with their full registry information"""
-        return self.tool_registry.get(category, [])
-    
+        """Get all tools in a specific category with their full registry information (flat registry)"""
+        return [
+            tool for tool in self.tool_registry.values()
+            if isinstance(tool, dict) and tool.get("category", "unknown") == category
+        ]
+
     def find_tool_by_intent(self, intent: str) -> List[Dict[str, Any]]:
         """Find tools that match a specific usage intent"""
         matching_tools = []
-        
-        for category, tools in self.tool_registry.items():
-            for tool in tools:
-                when_to_use = tool.get("when_to_use", [])
-                if any(intent.lower() in use_case.lower() for use_case in when_to_use):
-                    matching_tools.append(tool)
-        
-        # Sort by priority
         priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        for tool in self.tool_registry.values():
+            if not isinstance(tool, dict):
+                continue
+            when_to_use = tool.get("when_to_use", [])
+            if any(intent.lower() in (w or '').lower() for w in when_to_use):
+                matching_tools.append(tool)
         matching_tools.sort(key=lambda x: priority_order.get(x.get("priority", "low"), 3))
-        
         return matching_tools
-    
+
     def register_tools(self):
-        """Register all available MCP tools from modules"""
-        try:
-            self.logger.info("Starting tool registration...")            # Import and register all tool modules
-            tool_modules = [
-                ('memory_tool', 'EnhancedMemoryTool'),
-                ('memory_interconnect', 'MemoryInterconnectionEngine'),
-                ('file_tool', 'FileTool'),
-                ('shell_tool', 'ShellTool'),
-                ('web_tool', 'WebTool'),
-                ('session_manager_tool', 'EnhancedSessionTool'),
-                ('visual_tool', 'VisualTool'),
-                ('vscode_terminal_tool', 'VSCodeTerminalTool'),
-                ('project_context_tool', 'ProjectContextTool'),
-                ('auto_tool_module', 'AutoTool'),
-                ('enhanced_code_analysis_tool', 'CodeAnalysisTool')
-            ]
-            
-            for module_name, class_name in tool_modules:
+        """Register all available MCP tools from modules (dynamic import)"""
+        import importlib
+        import pkgutil
+        import sys
+        from pathlib import Path
+
+        tools_dir = Path(__file__).parent / "tools"
+        sys.path.insert(0, str(tools_dir.parent))  # Ensure parent dir is in sys.path
+
+        self.tools = {}
+        self.tool_registry = {}
+
+        for module_info in pkgutil.iter_modules([str(tools_dir)]):
+            mod_name = module_info.name
+            if mod_name.startswith("__"):  # skip __pycache__ etc
+                continue
+            try:
+                module = importlib.import_module(f"tools.{mod_name}")
+            except Exception as e:
+                self.logger.warning(f"Failed to import tool module {mod_name}: {e}")
+                continue
+            get_tools = getattr(module, "get_tools", None)
+            if callable(get_tools):
                 try:
-                    self.logger.debug(f"Loading {module_name}...")
-                    module = __import__(f'tools.{module_name}', fromlist=[class_name])
-                    tool_class = getattr(module, class_name)
-                    tool_instance = tool_class()
-                    
-                    # Get tools from the instance
-                    if hasattr(tool_instance, 'get_tools'):
-                        module_tools = tool_instance.get_tools()
-                        self.tools.update(module_tools)
-                        self.tool_modules[module_name] = tool_instance
-                        self.logger.info(f"Loaded {len(module_tools)} tools from {module_name}")
-                    else:
-                        self.logger.warning(f"{module_name} does not have get_tools() method")
-                        
-                except ImportError as e:
-                    self.logger.error(f"Failed to import {module_name}: {e}")
+                    tool_map = get_tools()
                 except Exception as e:
-                    self.logger.error(f"Failed to load {module_name}: {e}")
-            
-            # Update server info
-            self.server_info["total_tools"] = len(self.tools)
-            
-            # Log successful registration
-            self.logger.info(f"Tool registration complete! {len(self.tools)} tools available")
-            self.log_tool_summary()
-            
-        except Exception as e:
-            self.logger.error(f"Critical error during tool registration: {e}")
-            self.logger.error(traceback.format_exc())
-    
+                    self.logger.warning(f"get_tools() failed in {mod_name}: {e}")
+                    continue
+                for tool_name, tool_info in tool_map.items():
+                    # tool_info can be a dict with 'callable' and 'metadata', or just a callable
+                    if isinstance(tool_info, dict) and "callable" in tool_info:
+                        self.tools[tool_name] = tool_info["callable"]
+                        meta = tool_info.get("metadata", {})
+                        meta["name"] = tool_name
+                        self.tool_registry[tool_name] = meta
+                    elif callable(tool_info):
+                        self.tools[tool_name] = tool_info
+                        self.tool_registry[tool_name] = {"name": tool_name, "description": "No description", "category": "uncategorized"}
+            else:
+                self.logger.info(f"No get_tools() in {mod_name}, skipping.")
+
+        self.logger.info("Tool registration complete! %d tools available", len(self.tools))
+        self.server_info["total_tools"] = len(self.tools)
+        self.log_tool_summary()
+
     def log_tool_summary(self):
         """Log detailed summary of registered tools"""
         self.logger.info("=" * 80)
         self.logger.info("MCP SERVER TOOL INVENTORY")
         self.logger.info("=" * 80)
-        
-        # Group tools by prefix/category
         categories = {}
         for tool_name in self.tools.keys():
             if tool_name.startswith('bb7_'):
                 category = tool_name.split('_')[1] if '_' in tool_name else 'misc'
             else:
                 category = 'legacy'
-            
             if category not in categories:
                 categories[category] = []
             categories[category].append(tool_name)
-        
         for category, tools in categories.items():
             self.logger.info(f"{category.upper()}: {len(tools)} tools")
             for tool in sorted(tools):
                 self.logger.info(f"   - {tool}")
-        
         self.logger.info("=" * 80)
         self.logger.info(f"TOTAL TOOLS REGISTERED: {len(self.tools)}")
         self.logger.info("=" * 80)
-    
+
     def call_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
         """Call a tool with comprehensive error handling and monitoring"""
         start_time = time.time()
         self.performance_metrics["tool_calls"] += 1
         self.performance_metrics["last_activity"] = start_time
-        
         try:
             if tool_name not in self.tools:
                 available_tools = list(self.tools.keys())
-                # Try to find similar tool names
                 similar = [t for t in available_tools if tool_name.lower() in t.lower()]
                 error_msg = f"Tool '{tool_name}' not found."
                 if similar:
                     error_msg += f" Did you mean: {', '.join(similar[:3])}?"
                 else:
                     error_msg += f" Available tools: {len(available_tools)} total"
-                
                 return {
                     "success": False,
                     "error": "TOOL_NOT_FOUND",
                     "message": error_msg,
-                    "available_tools": available_tools[:10]  # Return first 10 for reference
+                    "available_tools": available_tools[:10]
                 }
-            
             self.logger.debug(f"Calling tool: {tool_name} with args: {kwargs}")
-            
-            # Call the tool function
             tool_func = self.tools[tool_name]
             if callable(tool_func):
                 result = tool_func(**kwargs)
-                
+                execution_time = time.time() - start_time
+                self.performance_metrics["successful_calls"] += 1
+                self.update_average_response_time(execution_time)
                 # Ensure result is JSON serializable
                 if isinstance(result, str):
                     formatted_result = {"success": True, "result": result}
@@ -1374,55 +1596,43 @@ class MCPServer:
                     formatted_result = result
                 else:
                     formatted_result = {"success": True, "result": str(result)}
-                
-                execution_time = time.time() - start_time
                 formatted_result["execution_time"] = round(execution_time, 3)
-                
-                self.performance_metrics["successful_calls"] += 1
-                self.update_average_response_time(execution_time)
-                
                 self.logger.debug(f"Tool {tool_name} completed in {execution_time:.3f}s")
                 return formatted_result
-                
             else:
                 return {
                     "success": False,
                     "error": "TOOL_NOT_CALLABLE",
                     "message": f"Tool '{tool_name}' is not a callable function"
                 }
-                
         except TypeError as e:
-            # Handle parameter mismatches
             self.performance_metrics["failed_calls"] += 1
             error_msg = f"Parameter error for tool '{tool_name}': {str(e)}"
             self.logger.error(error_msg)
-            
+            self.logger.error(traceback.format_exc())
             return {
                 "success": False,
                 "error": "PARAMETER_ERROR",
                 "message": error_msg,
-                "provided_args": list(kwargs.keys())
+                "provided_args": list(kwargs.keys()),
+                "exception_type": type(e).__name__
             }
-            
         except Exception as e:
-            # Handle all other exceptions
             self.performance_metrics["failed_calls"] += 1
             error_msg = f"Tool '{tool_name}' execution failed: {str(e)}"
             self.logger.error(error_msg)
             self.logger.error(traceback.format_exc())
-            
             return {
                 "success": False,
                 "error": "EXECUTION_ERROR",
                 "message": error_msg,
                 "exception_type": type(e).__name__
             }
-    
+
     def update_average_response_time(self, execution_time: float):
         """Update rolling average response time"""
         current_avg = self.performance_metrics["average_response_time"]
         total_calls = self.performance_metrics["successful_calls"]
-        
         if total_calls == 1:
             self.performance_metrics["average_response_time"] = execution_time
         else:
@@ -1430,463 +1640,4 @@ class MCPServer:
             self.performance_metrics["average_response_time"] = (
                 (current_avg * (total_calls - 1) + execution_time) / total_calls
             )
-    
-    def get_server_info(self) -> Dict[str, Any]:
-        """Get comprehensive server information"""
-        uptime = time.time() - self.server_info["startup_time"]
-        
-        return {
-            **self.server_info,
-            "uptime_seconds": round(uptime, 1),
-            "performance_metrics": self.performance_metrics.copy(),
-            "tool_count": len(self.tools),
-            "available_tools": list(self.tools.keys()),
-            "module_count": len(self.tool_modules),
-            "loaded_modules": list(self.tool_modules.keys()),
-            "registry_categories": list(self.tool_registry.keys()),
-            "status": "operational"
-        }
-    
-    def get_tool_list(self, category: Optional[str] = None) -> List[str]:
-        """Get list of available tools, optionally filtered by category"""
-        if category:
-            if category.startswith('bb7_'):
-                category = category[4:]  # Remove bb7_ prefix
-            
-            filtered_tools = [
-                name for name in self.tools.keys() 
-                if category.lower() in name.lower()
-            ]
-            return sorted(filtered_tools)
-        
-        return sorted(list(self.tools.keys()))
-    
-    def get_tool_info(self, tool_name: str) -> Dict[str, Any]:
-        """Get detailed information about a specific tool including registry data"""
-        if tool_name not in self.tools:
-            return {"error": f"Tool '{tool_name}' not found"}
-        
-        tool_func = self.tools[tool_name]
-        
-        # Find registry information
-        registry_info = None
-        for category, tools in self.tool_registry.items():
-            for tool_data in tools:
-                if tool_data["name"] == tool_name:
-                    registry_info = tool_data
-                    break
-            if registry_info:
-                break
-        
-        # Extract function signature information
-        import inspect
-        try:
-            sig = inspect.signature(tool_func)
-            parameters = {}
-            for param_name, param in sig.parameters.items():
-                param_info = {
-                    "name": param_name,
-                    "required": param.default == inspect.Parameter.empty,
-                    "type": str(param.annotation) if param.annotation != inspect.Parameter.empty else "Any"
-                }
-                if param.default != inspect.Parameter.empty:
-                    param_info["default"] = param.default
-                parameters[param_name] = param_info
-            
-            tool_info = {
-                "name": tool_name,
-                "parameters": parameters,
-                "docstring": tool_func.__doc__ or "No documentation available",
-                "module": getattr(tool_func, '__module__', 'unknown'),
-                "callable": True
-            }
-            
-            # Add registry information if available
-            if registry_info:
-                tool_info.update({
-                    "registry_description": registry_info.get("description", ""),
-                    "category": registry_info.get("category", "unknown"),
-                    "priority": registry_info.get("priority", "medium"),
-                    "when_to_use": registry_info.get("when_to_use", []),
-                    "input_schema": registry_info.get("input_schema", {})
-                })
-            
-            return tool_info
-            
-        except Exception as e:
-            return {
-                "name": tool_name,
-                "error": f"Could not inspect tool: {str(e)}",
-                "callable": callable(tool_func),
-                "registry_info": registry_info
-            }
-    
-    def health_check(self) -> Dict[str, Any]:
-        """Comprehensive health check"""
-        try:
-            # Test core functionality
-            memory_test = self.call_tool("bb7_memory_stats") if "bb7_memory_stats" in self.tools else None
-            file_test = self.call_tool("bb7_get_file_info", path=".") if "bb7_get_file_info" in self.tools else None
-            
-            health_status = {
-                "server_healthy": True,
-                "total_tools": len(self.tools),
-                "registry_categories": len(self.tool_registry),
-                "performance_metrics": self.performance_metrics.copy(),
-                "uptime": time.time() - self.server_info["startup_time"],
-                "test_results": {
-                    "memory_tool": memory_test is not None and memory_test.get("success", False),
-                    "file_tool": file_test is not None and file_test.get("success", False)
-                },
-                "timestamp": time.time()
-            }
-            
-            return health_status
-            
-        except Exception as e:
-            return {
-                "server_healthy": False,
-                "error": str(e),
-                "timestamp": time.time()
-            }
-    
-    def shutdown(self):
-        """Graceful server shutdown"""
-        self.logger.info("Initiating MCP Server shutdown...")
-        
-        try:
-            # Save shutdown status
-            shutdown_info = {
-                "shutdown_time": time.time(),
-                "final_metrics": self.performance_metrics.copy(),
-                "total_uptime": time.time() - self.server_info["startup_time"],
-                "total_tools": len(self.tools),
-                "registry_categories": len(self.tool_registry)
-            }
-            
-            shutdown_file = self.data_dir / "shutdown_status.json"
-            with open(shutdown_file, 'w', encoding='utf-8') as f:
-                json.dump(shutdown_info, f, indent=2)
-            
-            self.logger.info("MCP Server shutdown complete")
-            
-        except Exception as e:
-            self.logger.error(f"Error during shutdown: {e}")
-    
-    def start_interactive_mode(self):
-        """Start interactive mode for testing and debugging"""
-        print("MCP Server Interactive Mode")
-        print("=" * 50)
-        print(f"Server: {self.server_info['name']} v{self.server_info['version']}")
-        print(f"Tools available: {len(self.tools)}")
-        print(f"Registry categories: {len(self.tool_registry)}")
-        print("\nCommands:")
-        print("  list                    - List all tools")
-        print("  info <tool_name>        - Get tool information")
-        print("  call <tool_name> [args] - Call a tool")
-        print("  guidance <query>        - Get tool recommendations")
-        print("  category <name>         - List tools in category")
-        print("  health                  - Server health check")
-        print("  stats                   - Performance statistics")
-        print("  quit                    - Exit interactive mode")
-        print("=" * 50)
-        
-        while True:
-            try:
-                user_input = input("\nmcp> ").strip()
-                if not user_input:
-                    continue
-                
-                parts = user_input.split()
-                command = parts[0].lower()
-                
-                if command == "quit":
-                    break
-                elif command == "list":
-                    tools = self.get_tool_list()
-                    print(f"\nAvailable tools ({len(tools)}):")
-                    for i, tool in enumerate(tools, 1):
-                        print(f"  {i:2}. {tool}")
-                
-                elif command == "info" and len(parts) > 1:
-                    tool_name = parts[1]
-                    info = self.get_tool_info(tool_name)
-                    print(f"\nTool Info: {tool_name}")
-                    print(json.dumps(info, indent=2))
-                
-                elif command == "guidance" and len(parts) > 1:
-                    query = ' '.join(parts[1:])
-                    guidance = self.get_tool_guidance(query)
-                    print(f"\nTool Guidance for: '{query}'")
-                    print(json.dumps(guidance, indent=2))
-                
-                elif command == "category" and len(parts) > 1:
-                    category = parts[1]
-                    tools = self.get_tool_by_category(category)
-                    print(f"\nTools in category '{category}' ({len(tools)}):")
-                    for tool in tools:
-                        print(f"  - {tool['name']}: {tool['description'][:80]}...")
-                
-                elif command == "call" and len(parts) > 1:
-                    tool_name = parts[1]
-                    # Simple argument parsing (could be improved)
-                    kwargs = {}
-                    if len(parts) > 2:
-                        try:
-                            # Try to parse as JSON
-                            args_str = ' '.join(parts[2:])
-                            kwargs = json.loads(args_str)
-                        except json.JSONDecodeError:
-                            # Fallback to simple key=value parsing
-                            for arg in parts[2:]:
-                                if '=' in arg:
-                                    key, value = arg.split('=', 1)
-                                    kwargs[key] = value
-                    
-                    result = self.call_tool(tool_name, **kwargs)
-                    print(f"\nResult:")
-                    print(json.dumps(result, indent=2))
-                
-                elif command == "health":
-                    health = self.health_check()
-                    print(f"\nHealth Check:")
-                    print(json.dumps(health, indent=2))
-                
-                elif command == "stats":
-                    stats = self.get_server_info()
-                    print(f"\nServer Statistics:")
-                    print(json.dumps(stats, indent=2))
-                
-                else:
-                    print(f"Unknown command: {command}")
-                    
-            except KeyboardInterrupt:
-                print("\nExiting...")
-                break
-            except Exception as e:
-                print(f"Error: {e}")
-        
-        print("Goodbye!")
-
-
-def handle_mcp_protocol(server):
-    """Handle MCP JSON-RPC protocol communication via stdin/stdout"""
-    server.logger.info("Starting MCP JSON-RPC protocol handler")
-    
-    try:
-        while True:
-            # Read JSON-RPC request from stdin
-            line = sys.stdin.readline()
-            if not line:
-                break
-                
-            try:
-                request = json.loads(line.strip())
-                server.logger.info(f"Received request: {request.get('method', 'unknown')}")
-                
-                # Handle the request
-                response = handle_jsonrpc_request(server, request)
-                
-                # Send response to stdout
-                json.dump(response, sys.stdout)
-                sys.stdout.write('\n')
-                sys.stdout.flush()
-                
-            except json.JSONDecodeError as e:
-                server.logger.error(f"Invalid JSON received: {e}")
-                error_response = {
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32700,
-                        "message": "Parse error"
-                    },
-                    "id": None
-                }
-                json.dump(error_response, sys.stdout)
-                sys.stdout.write('\n')
-                sys.stdout.flush()
-                
-            except Exception as e:
-                server.logger.error(f"Error handling request: {e}")
-                server.logger.error(traceback.format_exc())
-                
-    except Exception as e:
-        server.logger.error(f"Protocol handler error: {e}")
-        server.logger.error(traceback.format_exc())
-
-
-def handle_jsonrpc_request(server, request):
-    """Handle a JSON-RPC request and return response"""
-    method = request.get("method")
-    params = request.get("params", {})
-    request_id = request.get("id")
-    
-    try:
-        if method == "initialize":
-            return {
-                "jsonrpc": "2.0",
-                "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "tools": {},
-                        "logging": {}
-                    },
-                    "serverInfo": {
-                        "name": server.server_info["name"],
-                        "version": server.server_info["version"]
-                    }
-                },
-                "id": request_id
-            }
-            
-        elif method == "tools/list":
-            tools = []
-            for tool_name, tool_func in server.tools.items():
-                # Get tool schema if available
-                tool_schema = {
-                    "name": tool_name,
-                    "description": getattr(tool_func, '__doc__', f"Tool: {tool_name}"),
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-                tools.append(tool_schema)
-            
-            return {
-                "jsonrpc": "2.0",
-                "result": {
-                    "tools": tools
-                },
-                "id": request_id
-            }
-            
-        elif method == "tools/call":
-            tool_name = params.get("name")
-            tool_args = params.get("arguments", {})
-            
-            if tool_name not in server.tools:
-                return {
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32602,
-                        "message": f"Tool '{tool_name}' not found"
-                    },
-                    "id": request_id
-                }
-            
-            try:
-                # Call the tool
-                result = server.call_tool(tool_name, **tool_args)
-                
-                return {
-                    "jsonrpc": "2.0",
-                    "result": {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": str(result)
-                            }
-                        ]
-                    },
-                    "id": request_id
-                }
-                
-            except Exception as e:
-                server.logger.error(f"Tool execution error: {e}")
-                return {
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32603,
-                        "message": f"Tool execution failed: {str(e)}"
-                    },
-                    "id": request_id
-                }
-        
-        else:
-            return {
-                "jsonrpc": "2.0",
-                "error": {
-                    "code": -32601,
-                    "message": f"Method '{method}' not found"
-                },
-                "id": request_id
-            }
-            
-    except Exception as e:
-        server.logger.error(f"Request handling error: {e}")
-        return {
-            "jsonrpc": "2.0",
-            "error": {
-                "code": -32603,
-                "message": f"Internal error: {str(e)}"
-            },
-            "id": request_id
-        }
-
-
-def main():
-    """Main entry point for MCP Server"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="MCP Server - Advanced AI Collaboration Platform")
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    parser.add_argument("--interactive", action="store_true", help="Start in interactive mode")
-    parser.add_argument("--health-check", action="store_true", help="Run health check and exit")
-    parser.add_argument("--list-tools", action="store_true", help="List all tools and exit")
-    parser.add_argument("--tool-info", type=str, help="Get info about specific tool and exit")
-    parser.add_argument("--guidance", type=str, help="Get tool guidance for query and exit")
-    
-    args = parser.parse_args()
-    
-    # Create and initialize server
-    server = MCPServer(debug=args.debug)
-    
-    try:
-        if args.health_check:
-            health = server.health_check()
-            print(json.dumps(health, indent=2), file=sys.stderr)
-            
-        elif args.list_tools:
-            tools = server.get_tool_list()
-            print(f"Available tools ({len(tools)}):", file=sys.stderr)
-            for tool in tools:
-                print(f"  - {tool}", file=sys.stderr)
-                
-        elif args.tool_info:
-            info = server.get_tool_info(args.tool_info)
-            print(json.dumps(info, indent=2), file=sys.stderr)
-            
-        elif args.guidance:
-            guidance = server.get_tool_guidance(args.guidance)
-            print(json.dumps(guidance, indent=2), file=sys.stderr)
-            
-        elif args.interactive:
-            server.start_interactive_mode()
-            
-        else:
-            # Default: MCP JSON-RPC protocol mode
-            # All logging goes to stderr, JSON-RPC messages to stdout
-            info = server.get_server_info()
-            server.logger.info("MCP Server Started in JSON-RPC protocol mode")
-            server.logger.info(f"Name: {info['name']}")
-            server.logger.info(f"Version: {info['version']}")
-            server.logger.info(f"Tools: {info['tool_count']}")
-            server.logger.info(f"Modules: {info['module_count']}")
-            server.logger.info(f"Registry Categories: {info['registry_categories']}")
-            server.logger.info("Ready for MCP JSON-RPC protocol connections")
-            
-            # Handle MCP protocol on stdin/stdout
-            handle_mcp_protocol(server)
-                
-    except Exception as e:
-        server.logger.error(f"Server error: {e}")
-        server.logger.error(traceback.format_exc())
-        
-    finally:
-        server.shutdown()
-
-
-if __name__ == "__main__":
-    main()
+# ...existing code...
