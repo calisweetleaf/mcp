@@ -1,0 +1,138 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.github/
+
+# C extensions
+*.so
+*.pyd
+*.dll
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+tests/data/mcp_server.log
+tests/data/*.log
+tests/data/*.txt
+tests/data/*.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+mcp_env/
+mcp-venv/
+venv
+
+# Virtualenv
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# Local data
+data/
+!data/README.md
+
+# Ignore all session and memory data except README
+data/sessions/
+data/memory_store.json
+data/importance_scores.json
+data/concept_index.json
+data/comprehensive_validation.json
+data/final_test_results.json
+data/comprehensive_tool_validation_report_final.md
+
+# Ignore temp scripts
+data/temp_scripts/
+
+# Ignore logs
+*.log
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore generated files
+gener
+
+# Ignore test artifacts
+*.tmp
+*.temp
+*.bak
+
+# Ignore markdown reports in data/
+data/*.md
+
+# Ignore any user secrets or credentials
+secrets.*
+*.key
+*.pem
+*.crt
