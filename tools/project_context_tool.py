@@ -551,15 +551,64 @@ class ProjectContextTool:
         else:
             return f"This is a {project_type} project using {', '.join(technologies)}. "
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available tool functions with bb7_ prefix for MCP consistency"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available project context tools with their metadata."""
         return {
-            # Use bb7_ prefix for all tools to maintain consistency with MCP naming conventions
-            'bb7_analyze_project_structure': lambda max_depth=3, include_hidden=False: 
-                self.analyze_project_structure(max_depth, include_hidden),
-            'bb7_get_project_dependencies': self.get_project_dependencies,
-            'bb7_get_recent_changes': lambda days=7: self.get_recent_changes(days),
-            'bb7_get_code_metrics': self.get_code_metrics
+            'bb7_analyze_project_structure': {
+                "callable": lambda max_depth=3, include_hidden=False: self.analyze_project_structure(max_depth, include_hidden),
+                "metadata": {
+                    "name": "bb7_analyze_project_structure",
+                    "description": "📊 Comprehensive project analysis including file structure, dependencies, and architecture insights. Use when starting work on new projects or when architectural understanding is needed.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["new_project", "architecture_analysis", "codebase_understanding", "onboarding"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "max_depth": { "type": "integer", "default": 3, "description": "Maximum directory depth to analyze" },
+                            "include_hidden": { "type": "boolean", "default": False, "description": "Include hidden files and directories" }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_get_project_dependencies': {
+                "callable": self.get_project_dependencies,
+                "metadata": {
+                    "name": "bb7_get_project_dependencies",
+                    "description": "📦 Analyze and list project dependencies, package.json, requirements.txt, etc. Use when understanding project setup or troubleshooting dependency issues.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["dependency_analysis", "setup_issues", "environment_check", "build_problems"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            },
+            'bb7_get_recent_changes': {
+                "callable": lambda days=7: self.get_recent_changes(days),
+                "metadata": {
+                    "name": "bb7_get_recent_changes",
+                    "description": "🔄 Get recent git changes, modified files, and development activity. Use when understanding recent work or catching up on project changes.",
+                    "category": "auto_activation",
+                    "priority": "medium",
+                    "when_to_use": ["recent_changes", "git_history", "catch_up", "change_analysis"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "days": { "type": "integer", "default": 7, "description": "Number of days to look back" } },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_get_code_metrics': {
+                "callable": self.get_code_metrics,
+                "metadata": {
+                    "name": "bb7_get_code_metrics",
+                    "description": "Get code metrics for the project.",
+                    "category": "project_context",
+                    "priority": "low",
+                    "when_to_use": ["code_analysis", "project_metrics"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            }
         }
 
 

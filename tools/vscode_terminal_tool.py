@@ -322,19 +322,95 @@ class VSCodeTerminalTool:
             self.logger.error(f"Error in terminal tool '{name}': {e}")
             return {"error": f"Error in terminal tool '{name}': {str(e)}"}
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return available VS Code terminal tools as callable functions"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available VS Code terminal tools with their metadata."""
         return {
-            "bb7_terminal_status": lambda: self.bb7_terminal_status({}),
-            "bb7_terminal_run_command": lambda command, change_directory=True, timeout=30:
-                self.bb7_terminal_run_command({"command": command, "change_directory": change_directory, "timeout": timeout}),
-            "bb7_terminal_history": lambda limit=10:
-                self.bb7_terminal_history({"limit": limit}),
-            "bb7_terminal_environment": lambda: self.bb7_terminal_environment({}),
-            "bb7_terminal_cd": lambda path=None:
-                self.bb7_terminal_cd({"path": path} if path else {}),
-            "bb7_terminal_which": lambda command:
-                self.bb7_terminal_which({"command": command})
+            'bb7_terminal_status': {
+                "callable": lambda: self.bb7_terminal_status({}),
+                "metadata": {
+                    "name": "bb7_terminal_status",
+                    "description": "🖥️ VS CODE INTEGRATION: Get current terminal status, environment, and integration state. Understand the active development context within VS Code.",
+                    "category": "terminal",
+                    "priority": "low",
+                    "when_to_use": ["terminal_check", "environment_status", "integration_check", "context_awareness"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            },
+            'bb7_terminal_run_command': {
+                "callable": lambda command, change_directory=True, timeout=30: self.bb7_terminal_run_command({"command": command, "change_directory": change_directory, "timeout": timeout}),
+                "metadata": {
+                    "name": "bb7_terminal_run_command",
+                    "description": "⚡ VS CODE TERMINAL: Run commands in current VS Code terminal context with full state awareness. Maintains directory context and environment continuity.",
+                    "category": "terminal",
+                    "priority": "high",
+                    "when_to_use": ["vscode_commands", "terminal_execution", "context_aware_commands", "development_tasks"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "command": { "type": "string", "description": "Command to execute" },
+                            "change_directory": { "type": "boolean", "default": True },
+                            "timeout": { "type": "integer", "default": 30 }
+                        },
+                        "required": ["command"]
+                    }
+                }
+            },
+            'bb7_terminal_history': {
+                "callable": lambda limit=10: self.bb7_terminal_history({"limit": limit}),
+                "metadata": {
+                    "name": "bb7_terminal_history",
+                    "description": "📜 VS CODE TERMINAL: Get recent command history from VS Code terminal. Use for understanding recent development activities or repeating commands.",
+                    "category": "terminal",
+                    "priority": "low",
+                    "when_to_use": ["command_history", "recent_activities", "command_repeat", "development_context"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "limit": { "type": "integer", "default": 10 } },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_terminal_environment': {
+                "callable": lambda: self.bb7_terminal_environment({}),
+                "metadata": {
+                    "name": "bb7_terminal_environment",
+                    "description": "🌍 VS CODE TERMINAL: Get environment variables and context from VS Code terminal. Use for understanding the development environment setup.",
+                    "category": "terminal",
+                    "priority": "low",
+                    "when_to_use": ["environment_check", "variable_inspection", "setup_verification", "debugging"],
+                    "input_schema": { "type": "object", "properties": {}, "required": [] }
+                }
+            },
+            'bb7_terminal_cd': {
+                "callable": lambda path=None: self.bb7_terminal_cd({"path": path} if path else {}),
+                "metadata": {
+                    "name": "bb7_terminal_cd",
+                    "description": "📁 VS CODE TERMINAL: Change directory with context tracking. Navigate filesystem while maintaining awareness of location and context.",
+                    "category": "terminal",
+                    "priority": "medium",
+                    "when_to_use": ["directory_navigation", "context_tracking", "filesystem_navigation", "project_navigation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "path": { "type": "string", "description": "Directory path to change to" } },
+                        "required": ["path"]
+                    }
+                }
+            },
+            'bb7_terminal_which': {
+                "callable": lambda command: self.bb7_terminal_which({"command": command}),
+                "metadata": {
+                    "name": "bb7_terminal_which",
+                    "description": "🔍 VS CODE TERMINAL: Find executables in PATH from VS Code terminal context. Use for checking tool availability and executable locations.",
+                    "category": "terminal",
+                    "priority": "low",
+                    "when_to_use": ["executable_location", "tool_availability", "path_check", "dependency_check"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "command": { "type": "string", "description": "Command/executable to locate" } },
+                        "required": ["command"]
+                    }
+                }
+            }
         }
 
 

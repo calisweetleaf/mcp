@@ -254,15 +254,109 @@ class FileTool:
             self.logger.error(f"Error searching files: {e}")
             return f"Error searching files: {str(e)}"
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available tool functions"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available file tools with their metadata."""
         return {
-            'bb7_read_file': self.read_file,
-            'bb7_write_file': self.write_file,
-            'bb7_append_file': self.append_file,
-            'bb7_list_directory': self.list_directory,
-            'bb7_get_file_info': self.get_file_info,
-            'bb7_search_files': lambda directory, pattern, max_results=50: self.search_files(directory, pattern, max_results)
+            'bb7_read_file': {
+                "callable": self.read_file,
+                "metadata": {
+                    "name": "bb7_read_file",
+                    "description": "📖 Read complete contents of any file on the system. Use for understanding code, reviewing configurations, analyzing logs, or accessing any text-based content. Supports all text encodings.",
+                    "category": "files",
+                    "priority": "high",
+                    "when_to_use": ["code_review", "file_analysis", "config_check", "log_reading", "documentation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "path": { "type": "string", "description": "Full or relative path to file" } },
+                        "required": ["path"]
+                    }
+                }
+            },
+            'bb7_write_file': {
+                "callable": self.write_file,
+                "metadata": {
+                    "name": "bb7_write_file",
+                    "description": "✍️ Create or overwrite files with new content. Use for generating code, creating documentation, saving configurations, or any file creation task. Creates directories as needed.",
+                    "category": "files",
+                    "priority": "high",
+                    "when_to_use": ["file_creation", "code_generation", "documentation", "config_save", "script_creation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "path": { "type": "string", "description": "Target file path" },
+                            "content": { "type": "string", "description": "Content to write" }
+                        },
+                        "required": ["path", "content"]
+                    }
+                }
+            },
+            'bb7_append_file': {
+                "callable": self.append_file,
+                "metadata": {
+                    "name": "bb7_append_file",
+                    "description": "➕ Add content to end of existing file or create new file. Use for logging, adding to existing code, or incremental file building.",
+                    "category": "files",
+                    "priority": "medium",
+                    "when_to_use": ["logging", "incremental_updates", "file_extension", "append_content"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "path": { "type": "string", "description": "Target file path" },
+                            "content": { "type": "string", "description": "Content to append" }
+                        },
+                        "required": ["path", "content"]
+                    }
+                }
+            },
+            'bb7_list_directory': {
+                "callable": self.list_directory,
+                "metadata": {
+                    "name": "bb7_list_directory",
+                    "description": "📂 List directory contents with detailed file information. Use for exploring project structure, understanding codebases, or finding files. Shows sizes, timestamps, and file types.",
+                    "category": "files",
+                    "priority": "medium",
+                    "when_to_use": ["directory_exploration", "project_structure", "file_discovery", "codebase_navigation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "path": { "type": "string", "description": "Directory path to list", "default": "." } },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_get_file_info': {
+                "callable": self.get_file_info,
+                "metadata": {
+                    "name": "bb7_get_file_info",
+                    "description": "ℹ️ Get detailed information about specific file or directory including size, timestamps, permissions, and type analysis. Use for understanding file characteristics.",
+                    "category": "files",
+                    "priority": "low",
+                    "when_to_use": ["file_analysis", "metadata_check", "permissions", "file_properties"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "path": { "type": "string", "description": "Path to analyze" } },
+                        "required": ["path"]
+                    }
+                }
+            },
+            'bb7_search_files': {
+                "callable": lambda directory, pattern, max_results=50: self.search_files(directory, pattern, max_results),
+                "metadata": {
+                    "name": "bb7_search_files",
+                    "description": "🔍 Search for files matching patterns in directory trees. Use for finding specific files, locating code patterns, or exploring large codebases. Supports glob patterns.",
+                    "category": "files",
+                    "priority": "medium",
+                    "when_to_use": ["file_discovery", "pattern_search", "codebase_exploration", "file_finding"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "directory": { "type": "string", "description": "Root directory to search" },
+                            "pattern": { "type": "string", "description": "Glob pattern (e.g., '*.py', '**/*.json')" },
+                            "max_results": { "type": "integer", "default": 50 }
+                        },
+                        "required": ["directory", "pattern"]
+                    }
+                }
+            }
         }
 
 

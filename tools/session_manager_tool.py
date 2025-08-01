@@ -902,30 +902,252 @@ class EnhancedSessionTool:
             self.logger.error(f"Error in cross-session analysis: {e}")
             return f"Error in cross-session analysis: {str(e)}"
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all available enhanced session tools"""
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all available enhanced session tools with their metadata."""
         return {
-            # Core enhanced session management
-            "bb7_start_session": self.bb7_start_session,
-            "bb7_log_event": self.bb7_log_event,
-            "bb7_capture_insight": self.bb7_capture_insight,
-            "bb7_record_workflow": self.bb7_record_workflow,
-            "bb7_update_focus": self.bb7_update_focus,
-            "bb7_pause_session": self.bb7_pause_session,
-            "bb7_resume_session": self.bb7_resume_session,
-            "bb7_list_sessions": self.bb7_list_sessions,
-            "bb7_get_session_summary": self.bb7_get_session_summary,
-
-            # Enhanced intelligence features
-            "bb7_get_session_insights": self.bb7_get_session_insights,
-            "bb7_cross_session_analysis": lambda days_back=30: self.bb7_cross_session_analysis(days_back),
-            "bb7_session_recommendations": lambda goal: json.dumps(self._generate_session_recommendations(goal), indent=2),
-            "bb7_learned_patterns": lambda: json.dumps(self.learned_patterns, indent=2),
-            "bb7_session_intelligence": lambda: json.dumps(self.session_intelligence, indent=2),
-            
-            # Memory integration
-            "bb7_link_memory_to_session": self.bb7_link_memory_to_session,
-            "bb7_auto_memory_stats": lambda: f"Auto-captured memories this session: {self.current_session.get('intelligence', {}).get('auto_captured_memories', 0) if self.current_session else 0}"
+            'bb7_start_session': {
+                "callable": self.bb7_start_session,
+                "metadata": {
+                    "name": "bb7_start_session",
+                    "description": "🎯 Begin a new cognitive development session with goal tracking, episodic memory, and workflow recording. Use when starting significant work, tackling new problems, or beginning focused development sessions. Creates structured memory for complex tasks.",
+                    "category": "sessions",
+                    "priority": "high",
+                    "when_to_use": ["new_project", "complex_task", "development_session", "focused_work"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "goal": { "type": "string", "description": "Clear objective for this session" },
+                            "context": { "type": "string", "description": "Background context or current situation" },
+                            "tags": { "type": "array", "items": {"type": "string"}, "description": "Categorization tags for the session" }
+                        },
+                        "required": ["goal"]
+                    }
+                }
+            },
+            'bb7_log_event': {
+                "callable": self.bb7_log_event,
+                "metadata": {
+                    "name": "bb7_log_event",
+                    "description": "📝 Record significant events, decisions, discoveries, or problems in the current session timeline. Use to build episodic memory of development process, track decision rationale, and create searchable development history.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["important_events", "decisions", "discoveries", "problems", "milestones"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "event_type": { "type": "string", "description": "Type: 'decision', 'discovery', 'problem', 'solution', 'insight'" },
+                            "description": { "type": "string", "description": "What happened and why it's significant" },
+                            "details": { "type": "object", "description": "Additional structured information" }
+                        },
+                        "required": ["event_type", "description"]
+                    }
+                }
+            },
+            'bb7_capture_insight': {
+                "callable": self.bb7_capture_insight,
+                "metadata": {
+                    "name": "bb7_capture_insight",
+                    "description": "💡 Record semantic insights, architectural understanding, or conceptual breakthroughs. Use when you or the user gain important understanding about the codebase, design patterns, or problem domain. Builds conceptual knowledge base.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["insights", "understanding", "breakthroughs", "learning", "patterns"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "insight": { "type": "string", "description": "The key insight or understanding" },
+                            "concept": { "type": "string", "description": "Main concept this relates to" },
+                            "relationships": { "type": "array", "items": {"type": "string"}, "description": "Related concepts or dependencies" }
+                        },
+                        "required": ["insight", "concept"]
+                    }
+                }
+            },
+            'bb7_record_workflow': {
+                "callable": self.bb7_record_workflow,
+                "metadata": {
+                    "name": "bb7_record_workflow",
+                    "description": "⚙️ Document successful workflows, processes, or step-by-step procedures for future reuse. Use when you discover effective approaches, solve complex problems, or establish repeatable processes. Builds procedural knowledge.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["successful_workflows", "processes", "procedures", "solutions", "patterns"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "workflow_name": { "type": "string", "description": "Descriptive name for the workflow" },
+                            "steps": { "type": "array", "items": {"type": "string"}, "description": "Ordered list of steps" },
+                            "context": { "type": "string", "description": "When and how to use this workflow" }
+                        },
+                        "required": ["workflow_name", "steps"]
+                    }
+                }
+            },
+            'bb7_update_focus': {
+                "callable": self.bb7_update_focus,
+                "metadata": {
+                    "name": "bb7_update_focus",
+                    "description": "🎯 Update current attention focus and energy state. Use when switching contexts, changing priorities, or when user's focus shifts. Helps maintain awareness of current cognitive state and priorities.",
+                    "category": "sessions",
+                    "priority": "low",
+                    "when_to_use": ["context_switch", "priority_change", "focus_shift", "energy_tracking"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "focus_areas": { "type": "array", "items": {"type": "string"}, "description": "Current areas of focus and attention" },
+                            "energy_level": { "type": "string", "enum": ["low", "medium", "high"], "default": "medium" },
+                            "momentum": { "type": "string", "enum": ["starting", "building", "flowing", "slowing"], "default": "steady" }
+                        },
+                        "required": ["focus_areas"]
+                    }
+                }
+            },
+            'bb7_pause_session': {
+                "callable": self.bb7_pause_session,
+                "metadata": {
+                    "name": "bb7_pause_session",
+                    "description": "⏸️ Pause current session with state preservation. Use when taking breaks, switching tasks, or ending work sessions. Captures environment state for seamless resumption.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["break_time", "task_switch", "session_end", "interruption"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "reason": { "type": "string", "description": "Why the session is being paused" } },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_resume_session': {
+                "callable": self.bb7_resume_session,
+                "metadata": {
+                    "name": "bb7_resume_session",
+                    "description": "▶️ Resume a previously paused session with full context restoration. Use when continuing interrupted work or returning to previous tasks. Provides seamless continuity.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["resume_work", "continue_task", "context_restoration", "session_continuation"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "session_id": { "type": "string", "description": "Session ID to resume" } },
+                        "required": ["session_id"]
+                    }
+                }
+            },
+            'bb7_list_sessions': {
+                "callable": self.bb7_list_sessions,
+                "metadata": {
+                    "name": "bb7_list_sessions",
+                    "description": "📋 View all development sessions with status and context. Use to understand work history, find interrupted tasks, or choose which session to resume.",
+                    "category": "sessions",
+                    "priority": "low",
+                    "when_to_use": ["session_review", "work_history", "interrupted_tasks", "session_selection"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "status": { "type": "string", "enum": ["active", "paused", "completed"] },
+                            "limit": { "type": "integer", "default": 20 }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_get_session_summary': {
+                "callable": self.bb7_get_session_summary,
+                "metadata": {
+                    "name": "bb7_get_session_summary",
+                    "description": "📊 Get detailed summary of specific session including events, insights, and outcomes. Use to understand context of previous work or communicate progress.",
+                    "category": "sessions",
+                    "priority": "low",
+                    "when_to_use": ["session_analysis", "progress_review", "context_understanding", "reporting"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "session_id": { "type": "string", "description": "Session to summarize" } },
+                        "required": ["session_id"]
+                    }
+                }
+            },
+            "bb7_get_session_insights": {
+                "callable": self.bb7_get_session_insights,
+                 "metadata": {
+                    "name": "bb7_get_session_insights",
+                    "description": "Get comprehensive insights about a session",
+                    "category": "sessions",
+                    "priority": "low",
+                    "when_to_use": ["session_analysis", "progress_review", "context_understanding", "reporting"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "session_id": { "type": "string", "description": "Session to get insights from" } },
+                        "required": ["session_id"]
+                    }
+                }
+            },
+            "bb7_cross_session_analysis": {
+                "callable": lambda days_back=30: self.bb7_cross_session_analysis(days_back),
+                "metadata": {
+                    "name": "bb7_cross_session_analysis",
+                    "description": "Analyze patterns, goals, and outcomes across multiple sessions. Use for longitudinal insights and workflow optimization.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["longitudinal_analysis", "workflow_optimization", "session_patterns"],
+                    "input_schema": {"type": "object", "properties": {"days_back": {"type": "integer", "default": 30}}, "required": []}
+                }
+            },
+            "bb7_session_recommendations": {
+                "callable": lambda goal: json.dumps(self._generate_session_recommendations(goal), indent=2),
+                "metadata": {
+                    "name": "bb7_session_recommendations",
+                    "description": "Provide recommendations for next actions or improvements based on session history and patterns.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["action_recommendations", "workflow_improvement", "session_guidance"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            "bb7_learned_patterns": {
+                "callable": lambda: json.dumps(self.learned_patterns, indent=2),
+                "metadata": {
+                    "name": "bb7_learned_patterns",
+                    "description": "Summarize recurring patterns, solutions, and best practices learned from past sessions and memories.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["pattern_recognition", "best_practices", "solution_summarization"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            "bb7_session_intelligence": {
+                "callable": lambda: json.dumps(self.session_intelligence, indent=2),
+                "metadata": {
+                    "name": "bb7_session_intelligence",
+                    "description": "Generate a session intelligence report, highlighting key insights, breakthroughs, and cognitive metrics.",
+                    "category": "sessions",
+                    "priority": "medium",
+                    "when_to_use": ["session_reporting", "cognitive_metrics", "insight_generation"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            "bb7_link_memory_to_session": {
+                "callable": self.bb7_link_memory_to_session,
+                "metadata": {
+                    "name": "bb7_link_memory_to_session",
+                    "description": "Link a memory key to the current session",
+                    "category": "sessions",
+                    "priority": "low",
+                    "when_to_use": ["memory_linking"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": { "memory_key": { "type": "string", "description": "Memory key to link" } },
+                        "required": ["memory_key"]
+                    }
+                }
+            },
+            "bb7_auto_memory_stats": {
+                "callable": lambda: f"Auto-captured memories this session: {self.current_session.get('intelligence', {}).get('auto_captured_memories', 0) if self.current_session else 0}",
+                "metadata": {
+                    "name": "bb7_auto_memory_stats",
+                    "description": "Automatically compute and report memory usage statistics, trends, and optimization suggestions.",
+                    "category": "memory",
+                    "priority": "low",
+                    "when_to_use": ["memory_management", "resource_optimization", "usage_analysis"],
+                    "input_schema": {"type": "object", "properties": {}, "required": []}
+                }
+            }
         }
 
     def _load_index(self) -> Dict[str, Any]:

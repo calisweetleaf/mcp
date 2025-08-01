@@ -87,34 +87,138 @@ class VisualTool:
             "ocr": PYTESSERACT_AVAILABLE and PIL_AVAILABLE
         }
     
-    def get_tools(self) -> Dict[str, Callable]:
-        """Return all visual tools as callable functions with graceful error handling"""
-        # Always register ALL tools regardless of dependency availability
-        # Each tool will handle missing dependencies with informative error messages
+    def get_tools(self) -> Dict[str, Dict[str, Any]]:
+        """Return all visual tools with their metadata."""
         return {
-            # Core visual awareness tools - always available
-            "bb7_screen_capture": lambda monitor=0, region=None, save_path=None, format="base64": 
-                self._screen_capture({"monitor": monitor, "region": region, "save_path": save_path, "format": format}),
-            "bb7_screen_monitor": lambda duration=5, threshold=0.1, save_frames=False: 
-                self._screen_monitor({"duration": duration, "threshold": threshold, "save_frames": save_frames}),
-            "bb7_visual_diff": lambda image1_path, image2_path, threshold=0.1, highlight_changes=True:
-                self._visual_diff({"image1_path": image1_path, "image2_path": image2_path, "threshold": threshold, "highlight_changes": highlight_changes}),
-            
-            # Window management tools - always available 
-            "bb7_window_manager": lambda action, window_title=None, position=None, size=None:
-                self._window_manager({"action": action, "window_title": window_title, "position": position, "size": size}),
-            "bb7_active_window": lambda include_geometry=True:
-                self._active_window({"include_geometry": include_geometry}),
-            
-            # Input control tools - always available
-            "bb7_keyboard_input": lambda text=None, keys=None, hotkey=None, delay=0.1:
-                self._keyboard_input({"text": text, "keys": keys, "hotkey": hotkey, "delay": delay}),
-            "bb7_mouse_control": lambda action, x=None, y=None, button="left", drag_to=None, scroll_direction=None, scroll_amount=3:
-                self._mouse_control({"action": action, "x": x, "y": y, "button": button, "drag_to": drag_to, "scroll_direction": scroll_direction, "scroll_amount": scroll_amount}),
-            
-            # Clipboard management - always available
-            "bb7_clipboard_manage": lambda action, text=None, format="text":
-                self._clipboard_manage({"action": action, "text": text, "format": format})
+            'bb7_screen_capture': {
+                "callable": lambda monitor=0, region=None, save_path=None, format="base64": self._screen_capture({"monitor": monitor, "region": region, "save_path": save_path, "format": format}),
+                "metadata": {
+                    "name": "bb7_screen_capture",
+                    "description": "📸 VISUAL PARTNERSHIP: Take screenshots for debugging, UI analysis, and visual understanding. Enables AI to see exactly what you see! Use for error screenshots, UI feedback, or visual documentation.",
+                    "category": "visual",
+                    "priority": "medium",
+                    "when_to_use": ["debugging", "ui_analysis", "visual_feedback", "documentation", "error_capture"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "monitor": { "type": "integer", "default": 0, "description": "Monitor to capture (0=primary, -1=all)" },
+                            "region": { "type": "object", "description": "Specific region {x, y, width, height}" },
+                            "save_path": { "type": "string", "description": "Optional file save path" },
+                            "format": { "type": "string", "enum": ["png", "jpg", "base64"], "default": "base64" }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_screen_monitor': {
+                "callable": lambda duration=5, threshold=0.1, save_frames=False: self._screen_monitor({"duration": duration, "threshold": threshold, "save_frames": save_frames}),
+                "metadata": {
+                    "name": "bb7_screen_monitor",
+                    "description": "Monitor the screen for visual changes over time, detecting UI updates or unexpected modifications.",
+                    "category": "visual",
+                    "priority": "medium",
+                    "when_to_use": ["ui_monitoring", "visual_debugging", "change_detection"],
+                    "input_schema": {"type": "object", "properties": {"duration": {"type": "integer", "default": 10}, "interval": {"type": "number", "default": 1.0}}, "required": []}
+                }
+            },
+            'bb7_visual_diff': {
+                "callable": lambda image1_path, image2_path, threshold=0.1, highlight_changes=True: self._visual_diff({"image1_path": image1_path, "image2_path": image2_path, "threshold": threshold, "highlight_changes": highlight_changes}),
+                "metadata": {
+                    "name": "bb7_visual_diff",
+                    "description": "Compare two images or screenshots to detect and highlight visual differences.",
+                    "category": "visual",
+                    "priority": "medium",
+                    "when_to_use": ["visual_testing", "ui_comparison", "regression_detection"],
+                    "input_schema": {"type": "object", "properties": {"image1_path": {"type": "string"}, "image2_path": {"type": "string"}, "threshold": {"type": "number", "default": 0.1}}, "required": ["image1_path", "image2_path"]}
+                }
+            },
+            'bb7_window_manager': {
+                "callable": lambda action, window_title=None, position=None, size=None: self._window_manager({"action": action, "window_title": window_title, "position": position, "size": size}),
+                "metadata": {
+                    "name": "bb7_window_manager",
+                    "description": "🪟 WORKSPACE AWARENESS: Manage windows and understand workspace layout. List windows, switch focus, resize, or organize the development environment.",
+                    "category": "visual",
+                    "priority": "low",
+                    "when_to_use": ["window_management", "workspace_organization", "focus_control", "layout_management"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "action": { "type": "string", "enum": ["list", "focus", "minimize", "maximize", "close", "move", "resize"] },
+                            "window_title": { "type": "string", "description": "Target window title" }
+                        },
+                        "required": ["action"]
+                    }
+                }
+            },
+            'bb7_active_window': {
+                "callable": lambda include_geometry=True: self._active_window({"include_geometry": include_geometry}),
+                "metadata": {
+                    "name": "bb7_active_window",
+                    "description": "Retrieve information about the currently active window, including title and geometry.",
+                    "category": "visual",
+                    "priority": "low",
+                    "when_to_use": ["window_management", "context_awareness", "ui_information"],
+                    "input_schema": {"type": "object", "properties": {"include_geometry": {"type": "boolean", "default": True}}, "required": []}
+                }
+            },
+            'bb7_keyboard_input': {
+                "callable": lambda text=None, keys=None, hotkey=None, delay=0.1: self._keyboard_input({"text": text, "keys": keys, "hotkey": hotkey, "delay": delay}),
+                "metadata": {
+                    "name": "bb7_keyboard_input",
+                    "description": "⌨️ AUTOMATION: Send keystrokes and keyboard shortcuts for automation and UI interaction. Type alongside the user, trigger shortcuts, or automate repetitive input tasks.",
+                    "category": "visual",
+                    "priority": "medium",
+                    "when_to_use": ["automation", "ui_interaction", "shortcuts", "text_input", "testing"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "text": { "type": "string", "description": "Text to type" },
+                            "keys": { "type": "array", "items": {"type": "string"}, "description": "Special keys to press" },
+                            "hotkey": { "type": "string", "description": "Hotkey combination (e.g., 'ctrl+c')" },
+                            "delay": { "type": "number", "default": 0.1 }
+                        },
+                        "required": []
+                    }
+                }
+            },
+            'bb7_mouse_control': {
+                "callable": lambda action, x=None, y=None, button="left", drag_to=None, scroll_direction=None, scroll_amount=3: self._mouse_control({"action": action, "x": x, "y": y, "button": button, "drag_to": drag_to, "scroll_direction": scroll_direction, "scroll_amount": scroll_amount}),
+                "metadata": {
+                    "name": "bb7_mouse_control",
+                    "description": "🖱️ AUTOMATION: Control mouse for clicking, dragging, and UI interaction. Click buttons, navigate interfaces, or automate mouse-based tasks.",
+                    "category": "visual",
+                    "priority": "medium",
+                    "when_to_use": ["ui_automation", "clicking", "dragging", "interface_navigation", "testing"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "action": { "type": "string", "enum": ["click", "double_click", "right_click", "drag", "scroll", "move"] },
+                            "x": {"type": "integer"},
+                            "y": {"type": "integer"},
+                            "button": { "type": "string", "enum": ["left", "right", "middle"], "default": "left" }
+                        },
+                        "required": ["action"]
+                    }
+                }
+            },
+            'bb7_clipboard_manage': {
+                "callable": lambda action, text=None, format="text": self._clipboard_manage({"action": action, "text": text, "format": format}),
+                "metadata": {
+                    "name": "bb7_clipboard_manage",
+                    "description": "📋 DATA EXCHANGE: Read/write clipboard for seamless data sharing between AI and human. Perfect for code snippets, URLs, or any text exchange.",
+                    "category": "visual",
+                    "priority": "medium",
+                    "when_to_use": ["data_exchange", "clipboard_access", "text_sharing", "copy_paste", "data_transfer"],
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "action": { "type": "string", "enum": ["read", "write", "clear", "history"] },
+                            "text": { "type": "string", "description": "Text to write to clipboard" }
+                        },
+                        "required": ["action"]
+                    }
+                }
+            }
         }
     
     def handle_tool_call(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
