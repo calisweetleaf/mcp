@@ -6,4 +6,3 @@ pyautogui
 pynput
 pytesseract
 pyperclip
-python3
