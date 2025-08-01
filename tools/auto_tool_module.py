@@ -6,7 +6,19 @@ This tool provides meta-intelligence for the MCP server ecosystem,
 helping Copilot understand available capabilities and automatically
 activating relevant context for seamless collaboration continuity.
 """
-
+from typing import Dict, Any, List, Optional, Callable
+from tools.memory_tool import EnhancedMemoryTool
+from tools.memory_interconnect import MemoryInterconnectionEngine
+from tools.session_manager_tool import EnhancedSessionTool
+from tools.visual_tool import VisualTool
+from tools.terminal_tool import TerminalTool
+from tools.code_analysis_tool import CodeAnalysisTool
+from tools.web_tool import WebTool
+from tools.file_tool import FileTool
+from tools.shell_tool import ShellTool
+from tools.vscode_terminal_tool import VSCodeTerminalTool
+from tools.project_context_tool import ProjectContextTool
+from tools.enhanced_code_analysis_tool import EnhancedCodeAnalysisTool
 import json
 import logging
 import os
@@ -14,8 +26,6 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
-from tools.memory_tool import EnhancedMemoryTool
-from tools.memory_interconnect import MemoryInterconnectionEngine
 
 
 class AutoTool:

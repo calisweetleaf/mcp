@@ -624,7 +624,7 @@ class EnhancedSessionTool:
             # Event analysis
             events = session.get("episodic", {}).get("events", [])
             if events:
-                insights.append(f"\n📝 Events: {len(events)} recorded")
+                insights.append(f"\n📝 Events ({len(events)} total):\n")
                 types = Counter(e.get("type", "?") for e in events)
                 top_types = ", ".join(f"{t}({c})" for t,c in types.most_common(5))
                 insights.append(f"  • Types: {top_types}")
@@ -632,7 +632,7 @@ class EnhancedSessionTool:
                 # Energy progression
                 energy_progression = self._extract_energy_progression(events)
                 if energy_progression:
-                    insights.append(f"  • Energy progression: {" -> ".join(energy_progression[:6])}{'...' if len(energy_progression)>6 else ''}")
+                    insights.append(f"  • Energy progression: {' -> '.join(energy_progression[:6])}{'...' if len(energy_progression)>6 else ''}")
             
             # Concepts and insights
             semantic = session.get("semantic", {})
@@ -663,7 +663,7 @@ class EnhancedSessionTool:
         except Exception as e:
             self.logger.error(f"Error generating session insights: {e}")
             return f"Error generating session insights: {str(e)}"
-    
+
     def bb7_cross_session_analysis(self, days_back: int = 30) -> str:
         """Analyze patterns across multiple sessions"""
         cutoff = time.time() - days_back*24*60*60

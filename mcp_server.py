@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 """
-MCP Server - Model Context Protocol Server Implementation
+MCP Server - Model Context Pro        # Initialize metrics and server info used later
+        self.server_info: TypeDict[str, Any] = {"total_tools": 0}
+        self.performance_metrics: TypeDict[str, Any] = {
+            "tool_calls": 0,
+            "successful_calls": 0,
+            "failed_calls": 0,
+            "average_response_time": 0.0,
+            "last_activity": None,
+        }
+        # L1/L2 KV cache structures
+        self._cache_lock = threading.Lock()
+        self._l1_cache: TypeDict[str, Tuple[Optional[float], Any]] = {}  # key -> (expiry_ts, value).server_info: TypeDict[str, Any] = {"total_tools": 0}
+        self.performance_metrics: TypeDict[str, Any] = {col Server Implementation
 Complete implementation with 55+ tools for advanced AI-human collaboration
 
 Features:
@@ -34,7 +46,7 @@ import importlib
 import pkgutil
 import inspect
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Any, List, Tuple, Optional, Dict as TypeDict
 
 
 class MCPServer:
@@ -44,10 +56,10 @@ class MCPServer:
     """
     def __init__(self, config_path=None):
         self.config_path = config_path or os.path.join(os.path.dirname(__file__), '.vscode', 'mcp.json')
-        self.tools: Dict[str, Any] = {}
-        self.tool_registry: Dict[str, Dict[str, Any]] = {}
-        self.tool_instances: Dict[str, Any] = {}
-        self.sessions: Dict[str, Any] = {}
+        self.tools: TypeDict[str, Any] = {}
+        self.tool_registry: TypeDict[str, TypeDict[str, Any]] = {}
+        self.tool_instances: TypeDict[str, Any] = {}
+        self.sessions: TypeDict[str, Any] = {}
         self.memory = None
         self.logger = self._setup_logger()
         self._initialized = False
@@ -55,8 +67,8 @@ class MCPServer:
         self.data_dir = Path('data')
         self.data_dir.mkdir(exist_ok=True)
         # Initialize metrics and server info used later
-        self.server_info: Dict[str, Any] = {"total_tools": 0}
-        self.performance_metrics: Dict[str, Any] = {
+        self.server_info: TypeDict[str, Any] = {"total_tools": 0}
+        self.performance_metrics: TypeDict[str, Any] = {
             "tool_calls": 0,
             "successful_calls": 0,
             "failed_calls": 0,
@@ -65,7 +77,7 @@ class MCPServer:
         }
         # L1/L2 KV cache structures
         self._cache_lock = threading.Lock()
-        self._l1_cache: Dict[str, Tuple[Optional[float], Any]] = {}  # key -> (expiry_ts, value)
+        self._l1_cache: TypeDict[str, Tuple[Optional[float], Any]] = {}  # key -> (expiry_ts, value)
         self._default_ttl = 5.0  # seconds; conservative default
         # L2 uses EnhancedMemoryTool via self.memory once initialized
         try:
@@ -254,7 +266,7 @@ class MCPServer:
         """Log detailed summary of registered tools"""
         self.logger.info("=" * 80)
         self.logger.info("MCP SERVER TOOL INVENTORY")
-        categories: Dict[str, List[str]] = {}
+        categories: TypeDict[str, List[str]] = {}
         for tool_name in self.tools:
             if tool_name.startswith('bb7_'):
                 category = tool_name.split('_')[1] if '_' in tool_name else 'misc'
@@ -271,7 +283,7 @@ class MCPServer:
         self.logger.info(f"TOTAL TOOLS REGISTERED: {len(self.tools)}")
         self.logger.info("=" * 80)
 
-    def _make_cache_key(self, tool_name: str, kwargs: Dict[str, Any]) -> str:
+    def _make_cache_key(self, tool_name: str, kwargs: TypeDict[str, Any]) -> str:
         try:
             payload = json.dumps({"tool": tool_name, "args": kwargs}, sort_keys=True, default=str)
         except Exception:
@@ -317,7 +329,7 @@ class MCPServer:
         except Exception:
             self.logger.error(f"Failed to store in L2 cache: {key} - {value}")
             self.logger.error(traceback.format_exc())
-    def call_tool(self, tool_name: str, **kwargs) -> Dict[str, Any]:
+    def call_tool(self, tool_name: str, **kwargs) -> TypeDict[str, Any]:
         """Call a tool with comprehensive error handling, monitoring, and caching"""
         start_time = time.time()
         self.performance_metrics["tool_calls"] += 1
@@ -413,49 +425,74 @@ class MCPServer:
             self.logger.error("Server not initialized. Cannot start.")
             return
 
-        # Prefer fastmcp if available; fallback to jsonrpcserver
         try:
             from jsonrpcserver import serve
-            from jsonrpcserver.methods import Methods
+            from jsonrpcserver.methods import Methods as JsonRpcMethodsClass
             from jsonrpcserver.exceptions import JsonRpcError
 
-            methods = Methods()
+            methods = JsonRpcMethodsClass()
 
             # Register all tools as JSON-RPC methods
-            for tool_name in self.tools:
-                def _tool_wrapper(tool_name=tool_name):
-                    def handler(**kwargs):
-                        try:
-                            self.logger.info(f"Received RPC call for tool: {tool_name} with args: {kwargs}")
-                            result = self.call_tool(tool_name, **kwargs)
-                            if not result.get("success"):
-                                error_message = result.get("message", "Tool execution failed")
-                                error_code = -32000  # Application error
-                                if result.get("error") == "NOT_FOUND":
-                                    error_code = -32601  # Method not found
-                                elif result.get("error") == "PARAMETER_ERROR":
-                                    error_code = -32602  # Invalid params
-                                raise JsonRpcError(error_message, code=error_code, data=result)
-                            return result.get("result")
-                        except JsonRpcError:
-                            raise
-                        except Exception as ex:
-                            self.logger.error(f"Error in RPC tool wrapper for {tool_name}: {ex}")
-                            self.logger.error(traceback.format_exc())
-                            raise JsonRpcError(f"Internal server error during tool execution: {ex}", code=-32000)
-                    return handler
+            for tool_name, tool_callable in self.tools.items():
+                # Wrap the callable to handle potential errors and logging
+                def _tool_wrapper(tool_name=tool_name, tool_callable=tool_callable, **kwargs):
+                    try:
+                        self.logger.info(f"Received RPC call for tool: {tool_name} with args: {kwargs}")
+                        result = self.call_tool(tool_name, **kwargs)
+                        if not result.get("success"):
+                            # If call_tool returns an error, raise a JsonRpcError
+                            error_message = result.get("message", "Tool execution failed")
+                            error_code = -32000  # Application error
+                            if result.get("error") == "NOT_FOUND":
+                                error_code = -32601  # Method not found
+                            elif result.get("error") == "PARAMETER_ERROR":
+                                error_code = -32602  # Invalid params
+                            raise JsonRpcError(error_message, code=error_code, data=result)
+                        return result.get("result")
+                    except JsonRpcError:
+                        raise  # Re-raise JsonRpcError directly
+                    except Exception as e:
+                        self.logger.error(f"Error in RPC tool wrapper for {tool_name}: {e}")
+                        self.logger.error(traceback.format_exc())
+                        raise JsonRpcError(f"Internal server error during tool execution: {e}", code=-32000)
 
-                methods.register(_tool_wrapper(), name=tool_name)
+                methods.register(_tool_wrapper, name=tool_name)
 
             self.logger.info(f"Starting MCP Server on {host}:{port}...")
             self.logger.info("Press Ctrl+C to shut down.")
-            serve(methods, host=host, port=port)
-                
-        except ImportError:
-            self.logger.error("Neither fastmcp nor jsonrpcserver is available. Please install one:\n"
-                              "pip install fastmcp\nor\npip install jsonrpcserver")
+            serve(methods, host=host, port=port, logger=self.logger)
 
-            # Flush session tracking
+        except ImportError:
+            self.logger.error("jsonrpcserver library not found. Please install it: pip install jsonrpcserver")
+        except Exception as e:
+            self.logger.error(f"Failed to start MCP Server: {e}")
+            self.logger.error(traceback.format_exc())
+
+    def shutdown(self):
+        """Performs a graceful shutdown of the server.
+        """
+        self.logger.info("Shutting down MCP Server...")
+        # Perform any cleanup here, e.g., saving state, closing connections
+        # For a simple HTTP server, there might not be much explicit cleanup needed here
+        # as `serve` typically blocks until interrupted.
+        self.logger.info("MCP Server shut down successfully.")
+
+
+if __name__ == '__main__':
+    # Configure logging for console output as well
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    logging.getLogger('SovereignMCP').addHandler(console_handler)
+    logging.getLogger('SovereignMCP').setLevel(logging.INFO)
+
+    server = MCPServer()
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        server.shutdown()
+    except Exception as main_e:
+        server.logger.critical(f"Unhandled exception in main server loop: {main_e}")
+        server.logger.critical(traceback.format_exc())
     def shutdown(self):
         """Gracefully shutdown the server and clean up resources."""
         self.logger.info("Shutting down MCP Server...")
